@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.supermarket.mapper.PurchaseOrderMapper">
+
+    <resultMap id="PurchaseOrderVOMap" type="com.supermarket.vo.PurchaseOrderVO">
+        <id column="id" property="id"/>
+        <result column="order_no" property="orderNo"/>
+        <result column="supplier_id" property="supplierId"/>
+        <result column="supplier_name" property="supplierName"/>
+        <result column="total_amount" property="totalAmount"/>
+        <result column="status" property="status"/>
+        <result column="applicant_id" property="applicantId"/>
+        <result column="applicant_name" property="applicantName"/>
+        <result column="auditor_id" property="auditorId"/>
+        <result column="auditor_name" property="auditorName"/>
+        <result column="audit_time" property="auditTime"/>
+        <result column="audit_remark" property="auditRemark"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <select id="selectPurchaseOrderVOList" resultMap="PurchaseOrderVOMap">
+        SELECT
+            po.id,
+            po.order_no,
+            po.supplier_id,
+            s.supplier_name,
+            po.total_amount,
+            po.status,
+            po.applicant_id,
+            u1.real_name AS applicant_name,
+            po.auditor_id,
+            u2.real_name AS auditor_name,
+            po.audit_time,
+            po.audit_remark,
+            po.create_time
+        FROM purchase_order po
+        LEFT JOIN supplier s ON po.supplier_id = s.id
+        LEFT JOIN sys_user u1 ON po.applicant_id = u1.id
+        LEFT JOIN sys_user u2 ON po.auditor_id = u2.id
+        <where>
+            <if test="orderNo != null and orderNo != ''">
+                AND po.order_no LIKE CONCAT('%', #{orderNo}, '%')
+            </if>
+            <if test="supplierId != null">
+                AND po.supplier_id = #{supplierId}
+            </if>
+            <if test="status != null">
+                AND po.status = #{status}
+            </if>
+            <if test="applicantId != null">
+                AND po.applicant_id = #{applicantId}
+            </if>
+        </where>
+        ORDER BY po.create_time DESC
+    </select>
+
+    <select id="selectPurchaseOrderVOById" resultMap="PurchaseOrderVOMap">
+        SELECT
+            po.id,
+            po.order_no,
+            po.supplier_id,
+            s.supplier_name,
+            po.total_amount,
+            po.status,
+            po.applicant_id,
+            u1.real_name AS applicant_name,
+            po.auditor_id,
+            u2.real_name AS auditor_name,
+            po.audit_time,
+            po.audit_remark,
+            po.create_time
+        FROM purchase_order po
+        LEFT JOIN supplier s ON po.supplier_id = s.id
+        LEFT JOIN sys_user u1 ON po.applicant_id = u1.id
+        LEFT JOIN sys_user u2 ON po.auditor_id = u2.id
+        WHERE po.id = #{id}
+    </select>
+
+</mapper>
+
+
+
