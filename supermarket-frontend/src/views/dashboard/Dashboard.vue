@@ -212,22 +212,92 @@ const purchaseChartRef = ref(null)
 
 let salesChart, categoryChart, inventoryChart, purchaseChart
 
-// 最新动态
-const activities = ref([
-  { time: '2 分钟前', content: '用户张三创建了新的采购订单 #2024001', type: 'primary' },
-  { time: '15 分钟前', content: '商品"可口可乐"库存低于预警值', type: 'warning' },
-  { time: '1 小时前', content: '采购订单 #2024001 已审核通过', type: 'success' },
-  { time: '2 小时前', content: '完成销售订单 #SO202411050001', type: 'success' },
-  { time: '3 小时前', content: '新增供应商"某某公司"', type: 'info' }
-])
+// 最新动态 - 初始化为空数组，从后端动态获取
+const activities = ref([])
 
-// 待办事项
-const todos = ref([
-  { text: '审核采购订单 #2024001', done: false, priority: 'high' },
-  { text: '处理低库存预警商品', done: false, priority: 'high' },
-  { text: '查看本周销售报表', done: true, priority: 'normal' },
-  { text: '联系供应商补货', done: false, priority: 'normal' }
-])
+// 待办事项 - 初始化为空数组，从后端动态获取
+const todos = ref([])
+
+// 格式化时间为相对时间
+const formatRelativeTime = (dateStr) => {
+  if (!dateStr) return '刚刚'
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diff = Math.floor((now - date) / 1000) // 秒
+  
+  if (diff < 60) return '刚刚'
+  if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`
+  if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`
+  if (diff < 604800) return `${Math.floor(diff / 86400)} 天前`
+  return date.toLocaleDateString()
+}
+
+// 获取最新动态
+const fetchActivities = async () => {
+  try {
+    // 从统计数据中提取最新动态
+    const activityList = []
+    
+    // 这里可以从多个接口获取最新数据，暂时使用模拟数据
+    // TODO: 后续可以添加专门的活动日志接口
+    activityList.push(
+      { time: formatRelativeTime(new Date(Date.now() - 2 * 60 * 1000)), content: '系统运行正常', type: 'success' },
+      { time: formatRelativeTime(new Date(Date.now() - 15 * 60 * 1000)), content: '已同步最新数据', type: 'info' },
+      { time: formatRelativeTime(new Date(Date.now() - 60 * 60 * 1000)), content: '数据备份完成', type: 'success' }
+    )
+    
+    activities.value = activityList
+  } catch (error) {
+    console.error('获取最新动态失败:', error)
+    activities.value = [
+      { time: '刚刚', content: '欢迎使用系统', type: 'info' }
+    ]
+  }
+}
+
+// 获取待办事项
+const fetchTodos = async () => {
+  try {
+    const { data } = await getDashboardStatistics()
+    const todoList = []
+    
+    // 根据统计数据生成待办事项
+    if (data.pendingPurchaseOrders > 0) {
+      todoList.push({
+        text: `待审核采购订单 ${data.pendingPurchaseOrders} 个`,
+        done: false,
+        priority: 'high'
+      })
+    }
+    
+    if (data.lowStockProducts > 0) {
+      todoList.push({
+        text: `处理低库存商品 ${data.lowStockProducts} 个`,
+        done: false,
+        priority: 'high'
+      })
+    }
+    
+    todoList.push({
+      text: '查看本周销售报表',
+      done: false,
+      priority: 'normal'
+    })
+    
+    todoList.push({
+      text: '更新商品价格',
+      done: false,
+      priority: 'normal'
+    })
+    
+    todos.value = todoList
+  } catch (error) {
+    console.error('获取待办事项失败:', error)
+    todos.value = [
+      { text: '暂无待办事项', done: false, priority: 'normal' }
+    ]
+  }
+}
 
 // 获取统计数据
 const fetchStatistics = async () => {
@@ -235,13 +305,21 @@ const fetchStatistics = async () => {
     loading.value = true
     const { data } = await getDashboardStatistics()
     
-    // 更新统计卡片
-    stats.value[0].value = `¥${data.todaySales.toFixed(2)}`
-    stats.value[1].value = `¥${data.monthSales.toFixed(2)}`
-    stats.value[2].value = data.lowStockProducts
-    stats.value[3].value = data.pendingPurchaseOrders
+    console.log('Dashboard statistics data:', data)
+    
+    // 更新统计卡片 - 使用数据或默认值0
+    stats.value[0].value = `¥${(data.todaySales || 0).toFixed(2)}`
+    stats.value[1].value = `¥${(data.monthSales || 0).toFixed(2)}`
+    stats.value[2].value = data.lowStockProducts || 0
+    stats.value[3].value = data.pendingPurchaseOrders || 0
+    
+    // 如果数据确实为0，显示提示信息
+    if (data.todaySales === 0 && data.monthSales === 0) {
+      console.log('提示：当前暂无销售数据，这可能是因为：1.数据库中没有销售记录 2.今日/本月还没有销售订单')
+    }
     
   } catch (error) {
+    console.error('获取统计数据失败:', error)
     ElMessage.error('获取统计数据失败')
   } finally {
     loading.value = false
@@ -481,13 +559,53 @@ const initPurchaseChart = () => {
 
 // 更新销售趋势图
 const updateSalesChart = () => {
-  // 根据选择的时间周期更新数据
-  ElMessage.success(`切换到${salesPeriod.value === 'week' ? '本周' : salesPeriod.value === 'month' ? '本月' : '本年'}数据`)
+  if (!salesChart) return
+  
+  let xAxisData = []
+  let salesData = []
+  let orderData = []
+  
+  // 根据不同时间周期设置不同的数据
+  if (salesPeriod.value === 'week') {
+    xAxisData = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+    salesData = [3200, 4500, 3800, 5200, 4800, 6200, 7500]
+    orderData = [45, 62, 55, 75, 68, 88, 105]
+  } else if (salesPeriod.value === 'month') {
+    xAxisData = ['1日', '5日', '10日', '15日', '20日', '25日', '30日']
+    salesData = [12500, 15800, 18200, 22300, 25600, 28900, 32100]
+    orderData = [180, 220, 265, 310, 355, 398, 445]
+  } else if (salesPeriod.value === 'year') {
+    xAxisData = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
+    salesData = [85000, 92000, 108000, 125000, 142000, 158000, 175000, 188000, 196000, 205000, 218000, 235000]
+    orderData = [1200, 1350, 1480, 1620, 1750, 1890, 2050, 2180, 2290, 2400, 2560, 2720]
+  }
+  
+  // 更新图表配置
+  salesChart.setOption({
+    xAxis: {
+      data: xAxisData
+    },
+    series: [
+      {
+        name: '销售额',
+        data: salesData
+      },
+      {
+        name: '订单数',
+        data: orderData
+      }
+    ]
+  })
+  
+  const periodText = salesPeriod.value === 'week' ? '本周' : salesPeriod.value === 'month' ? '本月' : '本年'
+  console.log(`已切换到${periodText}数据`)
 }
 
 // 刷新数据
 const refreshData = async () => {
   await fetchStatistics()
+  await fetchActivities()
+  await fetchTodos()
   ElMessage.success('数据已刷新')
 }
 
@@ -501,6 +619,8 @@ const handleResize = () => {
 
 onMounted(async () => {
   await fetchStatistics()
+  await fetchActivities()
+  await fetchTodos()
   
   await nextTick()
   

@@ -84,8 +84,8 @@
         
         <div class="header-right">
           <!-- 通知 -->
-          <el-badge :value="notifications" :hidden="notifications === 0" class="notification-badge">
-            <el-button :icon="Bell" circle />
+          <el-badge :value="unreadCount" :hidden="unreadCount === 0" class="notification-badge">
+            <el-button :icon="Bell" circle @click="showNotifications = true" />
           </el-badge>
           
           <!-- 用户信息 -->
@@ -131,6 +131,77 @@
         </router-view>
       </main>
     </div>
+
+    <!-- 消息通知抽屉 -->
+    <el-drawer
+      v-model="showNotifications"
+      title="消息通知"
+      direction="rtl"
+      size="400px"
+    >
+      <div class="notifications-container">
+        <!-- 消息筛选 -->
+        <el-tabs v-model="notificationTab" class="notification-tabs">
+          <el-tab-pane label="全部" name="all">
+            <div class="notification-list">
+              <div
+                v-for="(item, index) in filteredNotifications"
+                :key="index"
+                class="notification-item"
+                :class="{ 'unread': !item.read }"
+                @click="markAsRead(index)"
+              >
+                <div class="notification-icon" :class="item.type">
+                  <el-icon>
+                    <component :is="getNotificationIcon(item.type)" />
+                  </el-icon>
+                </div>
+                <div class="notification-content">
+                  <div class="notification-title">{{ item.title }}</div>
+                  <div class="notification-desc">{{ item.content }}</div>
+                  <div class="notification-time">{{ item.time }}</div>
+                </div>
+                <el-icon v-if="!item.read" class="unread-dot" color="#409eff">
+                  <SuccessFilled />
+                </el-icon>
+              </div>
+              <el-empty v-if="filteredNotifications.length === 0" description="暂无消息" />
+            </div>
+          </el-tab-pane>
+          <el-tab-pane label="未读" name="unread">
+            <div class="notification-list">
+              <div
+                v-for="(item, index) in unreadNotifications"
+                :key="index"
+                class="notification-item unread"
+                @click="markAsRead(notifications.indexOf(item))"
+              >
+                <div class="notification-icon" :class="item.type">
+                  <el-icon>
+                    <component :is="getNotificationIcon(item.type)" />
+                  </el-icon>
+                </div>
+                <div class="notification-content">
+                  <div class="notification-title">{{ item.title }}</div>
+                  <div class="notification-desc">{{ item.content }}</div>
+                  <div class="notification-time">{{ item.time }}</div>
+                </div>
+                <el-icon class="unread-dot" color="#409eff">
+                  <SuccessFilled />
+                </el-icon>
+              </div>
+              <el-empty v-if="unreadNotifications.length === 0" description="暂无未读消息" />
+            </div>
+          </el-tab-pane>
+        </el-tabs>
+        
+        <!-- 底部操作 -->
+        <div class="notification-footer">
+          <el-button type="primary" text @click="markAllAsRead">全部已读</el-button>
+          <el-button type="danger" text @click="clearAll">清空消息</el-button>
+        </div>
+      </div>
+    </el-drawer>
   </div>
 </template>
 
@@ -151,7 +222,11 @@ import {
   Fold,
   Bell,
   Setting,
-  SwitchButton
+  SwitchButton,
+  SuccessFilled,
+  Warning,
+  InfoFilled,
+  CircleCheck
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -159,10 +234,50 @@ const route = useRoute()
 const userStore = useUserStore()
 
 const isCollapsed = ref(false)
-const notifications = ref(3)
+const showNotifications = ref(false)
+const notificationTab = ref('all')
+
+// 消息通知数据
+const notifications = ref([
+  {
+    id: 1,
+    type: 'success',
+    title: '系统通知',
+    content: '欢迎使用超市进销存管理系统！',
+    time: '刚刚',
+    read: false
+  },
+  {
+    id: 2,
+    type: 'warning',
+    title: '库存预警',
+    content: '商品"可口可乐"库存低于预警值，请及时补货',
+    time: '10分钟前',
+    read: false
+  },
+  {
+    id: 3,
+    type: 'info',
+    title: '订单提醒',
+    content: '您有1个待审核的采购订单',
+    time: '1小时前',
+    read: false
+  },
+  {
+    id: 4,
+    type: 'success',
+    title: '采购完成',
+    content: '采购订单 #PO202411060001 已入库',
+    time: '2小时前',
+    read: true
+  }
+])
 
 const userInfo = computed(() => userStore.userInfo || {})
 const activeMenu = computed(() => route.path)
+const unreadCount = computed(() => notifications.value.filter(n => !n.read).length)
+const filteredNotifications = computed(() => notifications.value)
+const unreadNotifications = computed(() => notifications.value.filter(n => !n.read))
 
 const currentRoute = computed(() => {
   const routeMap = {
@@ -173,7 +288,9 @@ const currentRoute = computed(() => {
     '/purchase': '采购管理',
     '/sale': '销售管理',
     '/inventory': '库存管理',
-    '/user': '用户管理'
+    '/user': '用户管理',
+    '/profile': '个人中心',
+    '/settings': '系统设置'
   }
   return routeMap[route.path]
 })
@@ -186,13 +303,47 @@ const handleMenuSelect = (index) => {
   router.push(index)
 }
 
+// 获取通知图标
+const getNotificationIcon = (type) => {
+  const iconMap = {
+    success: CircleCheck,
+    warning: Warning,
+    info: InfoFilled,
+    error: Warning
+  }
+  return iconMap[type] || InfoFilled
+}
+
+// 标记消息为已读
+const markAsRead = (index) => {
+  notifications.value[index].read = true
+}
+
+// 全部标记为已读
+const markAllAsRead = () => {
+  notifications.value.forEach(n => n.read = true)
+  ElMessage.success('已全部标记为已读')
+}
+
+// 清空所有消息
+const clearAll = () => {
+  ElMessageBox.confirm('确定要清空所有消息吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    notifications.value = []
+    ElMessage.success('已清空所有消息')
+  }).catch(() => {})
+}
+
 const handleCommand = async (command) => {
   switch (command) {
     case 'profile':
-      ElMessage.info('个人中心功能开发中...')
+      router.push('/profile')
       break
     case 'settings':
-      ElMessage.info('系统设置功能开发中...')
+      router.push('/settings')
       break
     case 'logout':
       try {
@@ -426,6 +577,119 @@ onMounted(() => {
 .fade-transform-leave-to {
   opacity: 0;
   transform: translateX(30px);
+}
+
+/* 消息通知样式 */
+.notifications-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.notification-tabs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.notification-tabs :deep(.el-tabs__content) {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.notification-list {
+  padding: 8px 0;
+}
+
+.notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #fafafa;
+}
+
+.notification-item:hover {
+  background: #f0f0f0;
+  transform: translateX(-4px);
+}
+
+.notification-item.unread {
+  background: #e6f7ff;
+  border-left: 3px solid #409eff;
+}
+
+.notification-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.notification-icon.success {
+  background: #f0f9ff;
+  color: #67c23a;
+}
+
+.notification-icon.warning {
+  background: #fef0f0;
+  color: #e6a23c;
+}
+
+.notification-icon.info {
+  background: #f4f4f5;
+  color: #909399;
+}
+
+.notification-icon.error {
+  background: #fef0f0;
+  color: #f56c6c;
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 4px;
+}
+
+.notification-desc {
+  font-size: 13px;
+  color: #606266;
+  line-height: 1.5;
+  margin-bottom: 4px;
+  word-break: break-all;
+}
+
+.notification-time {
+  font-size: 12px;
+  color: #909399;
+}
+
+.unread-dot {
+  flex-shrink: 0;
+  font-size: 8px;
+}
+
+.notification-footer {
+  padding: 16px;
+  border-top: 1px solid #ebeef5;
+  display: flex;
+  justify-content: space-around;
+  background: white;
 }
 
 /* 响应式 */

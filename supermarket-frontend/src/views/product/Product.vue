@@ -1,15 +1,20 @@
 <template>
-  <div class="product-container page-container">
-    <div class="page-header">
-      <h1 class="page-title">
-        <el-icon><Goods /></el-icon>
-        商品管理
-      </h1>
-      <el-button type="primary" :icon="Plus" @click="handleAdd">新增商品</el-button>
-    </div>
+  <div class="product-container">
+    <el-card class="page-header">
+      <div class="header-content">
+        <div class="title-section">
+          <h2>
+            <el-icon><Goods /></el-icon>
+            商品管理
+          </h2>
+          <p class="subtitle">管理商品信息</p>
+        </div>
+        <el-button type="primary" :icon="Plus" @click="handleAdd">新增商品</el-button>
+      </div>
+    </el-card>
 
     <!-- 搜索工具栏 -->
-    <div class="toolbar card">
+    <el-card class="toolbar">
       <el-form :model="queryForm" :inline="true">
         <el-form-item label="商品名称">
           <el-input v-model="queryForm.productName" placeholder="请输入商品名称" clearable />
@@ -35,10 +40,10 @@
           <el-button :icon="RefreshLeft" @click="handleReset">重置</el-button>
         </el-form-item>
       </el-form>
-    </div>
+    </el-card>
 
     <!-- 商品列表 -->
-    <div class="card table-card">
+    <el-card class="table-card">
       <el-table
         :data="tableData"
         v-loading="loading"
@@ -107,7 +112,7 @@
         @size-change="handleSearch"
         @current-change="handleSearch"
       />
-    </div>
+    </el-card>
 
     <!-- 新增/编辑对话框 -->
     <el-dialog
@@ -398,48 +403,69 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .product-container {
-  animation: fadeInUp 0.5s ease;
-}
-
-.toolbar {
-  margin-bottom: 20px;
   padding: 20px;
-}
 
-.table-card {
-  padding: 24px;
-}
+  .page-header {
+    margin-bottom: 20px;
 
-.product-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
 
-.product-name {
-  font-weight: 500;
-  color: var(--text-primary);
-}
+      .title-section {
+        h2 {
+          margin: 0 0 8px 0;
+          font-size: 24px;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
 
-.price {
-  font-weight: 600;
-  color: var(--text-secondary);
-}
+        .subtitle {
+          margin: 0;
+          color: #909399;
+          font-size: 14px;
+        }
+      }
+    }
+  }
 
-.price.primary {
-  color: var(--primary-color);
-  font-size: 16px;
-}
+  .toolbar {
+    margin-bottom: 20px;
+  }
 
-:deep(.el-table) {
-  border-radius: var(--radius-md);
-}
+  .table-card {
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  }
 
-:deep(.el-pagination) {
-  margin-top: 24px;
-  justify-content: center;
+  .product-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .product-name {
+    font-weight: 500;
+  }
+
+  .price {
+    font-weight: 600;
+    color: #606266;
+    
+    &.primary {
+      color: #409eff;
+      font-size: 16px;
+    }
+  }
+
+  :deep(.el-pagination) {
+    margin-top: 24px;
+    justify-content: center;
+  }
 }
 </style>
 

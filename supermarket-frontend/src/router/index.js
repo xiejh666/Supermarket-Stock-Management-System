@@ -60,6 +60,18 @@ const routes = [
         name: 'User',
         component: () => import('@/views/user/User.vue'),
         meta: { title: '用户管理', requiresAuth: true, requiresAdmin: true }
+      },
+      {
+        path: 'profile',
+        name: 'Profile',
+        component: () => import('@/views/profile/Profile.vue'),
+        meta: { title: '个人中心', requiresAuth: true }
+      },
+      {
+        path: 'settings',
+        name: 'Settings',
+        component: () => import('@/views/settings/Settings.vue'),
+        meta: { title: '系统设置', requiresAuth: true }
       }
     ]
   },
