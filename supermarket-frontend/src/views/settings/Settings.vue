@@ -22,55 +22,27 @@
                 <h3 class="section-title">系统信息</h3>
                 <el-form label-width="120px">
                   <el-form-item label="系统名称">
-                    <el-input v-model="systemSettings.name" style="max-width: 400px" />
+                    <el-input 
+                      v-model="settings.systemName" 
+                      placeholder="请输入系统名称"
+                      style="max-width: 400px" 
+                    />
                   </el-form-item>
                   <el-form-item label="系统版本">
                     <el-tag type="success">v1.0.0</el-tag>
                   </el-form-item>
                   <el-form-item label="系统描述">
                     <el-input
-                      v-model="systemSettings.description"
+                      v-model="settings.systemDescription"
                       type="textarea"
+                      placeholder="请输入系统描述"
                       :rows="3"
                       style="max-width: 400px"
                     />
                   </el-form-item>
                   <el-form-item>
                     <el-button type="primary" @click="handleSave">保存设置</el-button>
-                  </el-form-item>
-                </el-form>
-              </div>
-            </el-tab-pane>
-
-            <!-- 外观设置 -->
-            <el-tab-pane label="外观设置" name="appearance">
-              <div class="settings-section">
-                <h3 class="section-title">界面主题</h3>
-                <el-form label-width="120px">
-                  <el-form-item label="主题模式">
-                    <el-radio-group v-model="appearanceSettings.theme">
-                      <el-radio label="light">浅色</el-radio>
-                      <el-radio label="dark">深色</el-radio>
-                      <el-radio label="auto">跟随系统</el-radio>
-                    </el-radio-group>
-                  </el-form-item>
-                  <el-form-item label="主题色">
-                    <el-color-picker v-model="appearanceSettings.primaryColor" />
-                  </el-form-item>
-                  <el-form-item label="布局方式">
-                    <el-radio-group v-model="appearanceSettings.layout">
-                      <el-radio label="classic">经典布局</el-radio>
-                      <el-radio label="modern">现代布局</el-radio>
-                    </el-radio-group>
-                  </el-form-item>
-                  <el-form-item label="显示面包屑">
-                    <el-switch v-model="appearanceSettings.showBreadcrumb" />
-                  </el-form-item>
-                  <el-form-item label="显示标签页">
-                    <el-switch v-model="appearanceSettings.showTabs" />
-                  </el-form-item>
-                  <el-form-item>
-                    <el-button type="primary" @click="handleSave">保存设置</el-button>
+                    <el-button @click="loadSettings">重置</el-button>
                   </el-form-item>
                 </el-form>
               </div>
@@ -83,73 +55,78 @@
                 <div class="notification-list">
                   <div class="notification-item">
                     <div class="notification-info">
-                      <div class="notification-title">库存预警通知</div>
+                      <div class="notification-title">
+                        <el-icon color="#409eff"><Bell /></el-icon>
+                        库存预警通知
+                      </div>
                       <div class="notification-desc">当商品库存低于预警值时发送通知</div>
                     </div>
-                    <el-switch v-model="notificationSettings.lowStock" />
+                    <el-switch v-model="settings.inventoryWarning" />
                   </div>
                   <div class="notification-item">
                     <div class="notification-info">
-                      <div class="notification-title">订单审核通知</div>
+                      <div class="notification-title">
+                        <el-icon color="#67c23a"><Document /></el-icon>
+                        订单审核通知
+                      </div>
                       <div class="notification-desc">有新的采购订单待审核时发送通知</div>
                     </div>
-                    <el-switch v-model="notificationSettings.orderAudit" />
+                    <el-switch v-model="settings.orderAudit" />
                   </div>
                   <div class="notification-item">
                     <div class="notification-info">
-                      <div class="notification-title">系统公告通知</div>
+                      <div class="notification-title">
+                        <el-icon color="#e6a23c"><InfoFilled /></el-icon>
+                        系统公告通知
+                      </div>
                       <div class="notification-desc">系统发布重要公告时发送通知</div>
                     </div>
-                    <el-switch v-model="notificationSettings.systemNotice" />
-                  </div>
-                  <div class="notification-item">
-                    <div class="notification-info">
-                      <div class="notification-title">邮件通知</div>
-                      <div class="notification-desc">通过邮件发送重要通知</div>
-                    </div>
-                    <el-switch v-model="notificationSettings.emailNotify" />
+                    <el-switch v-model="settings.systemNotice" />
                   </div>
                 </div>
-                <el-button type="primary" @click="handleSave" style="margin-top: 20px">
-                  保存设置
-                </el-button>
+                <el-form label-width="120px" style="margin-top: 20px;">
+                  <el-form-item>
+                    <el-button type="primary" @click="handleSave">保存设置</el-button>
+                  </el-form-item>
+                </el-form>
               </div>
             </el-tab-pane>
 
             <!-- 安全设置 -->
             <el-tab-pane label="安全设置" name="security">
               <div class="settings-section">
-                <h3 class="section-title">登录安全</h3>
+                <h3 class="section-title">账号安全</h3>
                 <el-form label-width="150px">
-                  <el-form-item label="密码过期天数">
-                    <el-input-number
-                      v-model="securitySettings.passwordExpireDays"
-                      :min="0"
+                  <el-form-item label="密码过期时间">
+                    <el-input-number 
+                      v-model="settings.passwordExpireDays" 
+                      :min="30" 
                       :max="365"
+                      style="width: 200px"
                     />
-                    <span class="form-tip">设置为0表示密码永不过期</span>
+                    <span class="form-tip">天（建议90天）</span>
                   </el-form-item>
-                  <el-form-item label="登录失败锁定">
-                    <el-switch v-model="securitySettings.lockAfterFailed" />
-                    <span class="form-tip">连续登录失败后锁定账号</span>
-                  </el-form-item>
-                  <el-form-item label="最大失败次数" v-if="securitySettings.lockAfterFailed">
-                    <el-input-number
-                      v-model="securitySettings.maxFailedAttempts"
-                      :min="3"
+                  <el-form-item label="登录失败锁定次数">
+                    <el-input-number 
+                      v-model="settings.loginFailTimes" 
+                      :min="3" 
                       :max="10"
+                      style="width: 200px"
                     />
+                    <span class="form-tip">次（建议5次）</span>
                   </el-form-item>
-                  <el-form-item label="锁定时间（分钟）" v-if="securitySettings.lockAfterFailed">
-                    <el-input-number
-                      v-model="securitySettings.lockDuration"
-                      :min="5"
-                      :max="60"
+                  <el-form-item label="会话超时时间">
+                    <el-input-number 
+                      v-model="settings.sessionTimeout" 
+                      :min="10" 
+                      :max="120"
+                      style="width: 200px"
                     />
+                    <span class="form-tip">分钟（建议30分钟）</span>
                   </el-form-item>
-                  <el-form-item label="强制使用强密码">
-                    <el-switch v-model="securitySettings.strongPassword" />
-                    <span class="form-tip">密码必须包含大小写字母、数字和特殊字符</span>
+                  <el-form-item label="强密码策略">
+                    <el-switch v-model="settings.strongPassword" />
+                    <span class="form-tip">启用后密码必须包含大小写字母、数字和特殊字符</span>
                   </el-form-item>
                   <el-form-item>
                     <el-button type="primary" @click="handleSave">保存设置</el-button>
@@ -161,69 +138,77 @@
             <!-- 数据设置 -->
             <el-tab-pane label="数据设置" name="data">
               <div class="settings-section">
-                <h3 class="section-title">数据管理</h3>
-                <div class="data-actions">
-                  <el-card class="action-card">
-                    <el-icon class="action-icon" color="#409eff"><Download /></el-icon>
-                    <h4>数据导出</h4>
-                    <p>导出系统数据到本地</p>
-                    <el-button type="primary" plain>导出数据</el-button>
-                  </el-card>
-                  <el-card class="action-card">
-                    <el-icon class="action-icon" color="#67c23a"><Upload /></el-icon>
-                    <h4>数据导入</h4>
-                    <p>从本地文件导入数据</p>
-                    <el-button type="success" plain>导入数据</el-button>
-                  </el-card>
-                  <el-card class="action-card">
-                    <el-icon class="action-icon" color="#e6a23c"><CircleCheck /></el-icon>
-                    <h4>数据备份</h4>
-                    <p>备份系统数据库数据</p>
-                    <el-button type="warning" plain>立即备份</el-button>
-                  </el-card>
-                  <el-card class="action-card">
-                    <el-icon class="action-icon" color="#f56c6c"><Delete /></el-icon>
-                    <h4>清理缓存</h4>
-                    <p>清理系统缓存数据</p>
-                    <el-button type="danger" plain>清理缓存</el-button>
-                  </el-card>
-                </div>
+                <h3 class="section-title">数据导出</h3>
+                <el-row :gutter="20" style="margin-top: 20px;">
+                  <el-col :span="12">
+                    <el-card class="data-card" shadow="hover">
+                      <div class="data-card-icon">
+                        <el-icon color="#409eff" :size="40"><Download /></el-icon>
+                      </div>
+                      <div class="data-card-content">
+                        <h4>导出商品数据</h4>
+                        <p>导出所有商品信息到Excel文件</p>
+                        <el-button 
+                          type="primary" 
+                          size="small" 
+                          :loading="exportLoading"
+                          @click="handleExportProducts"
+                          style="margin-top: 10px;"
+                        >
+                          <el-icon><Download /></el-icon>
+                          立即导出
+                        </el-button>
+                      </div>
+                    </el-card>
+                  </el-col>
+                </el-row>
               </div>
             </el-tab-pane>
 
             <!-- 关于系统 -->
             <el-tab-pane label="关于系统" name="about">
               <div class="settings-section">
+                <h3 class="section-title">系统信息</h3>
                 <div class="about-content">
                   <div class="about-logo">
                     <el-icon :size="80" color="#409eff"><ShoppingCart /></el-icon>
                   </div>
-                  <h2>超市进销存管理系统</h2>
-                  <p class="version">Version 1.0.0</p>
+                  <h2>{{ settings.systemName || '超市进销存管理系统' }}</h2>
+                  <p class="version">版本：v1.0.0</p>
+                  <p class="description">
+                    {{ settings.systemDescription || '专业的超市进销存管理解决方案，提供商品、采购、销售、库存全流程管理' }}
+                  </p>
+                  
                   <el-divider />
-                  <div class="about-info">
-                    <div class="info-row">
-                      <span class="label">技术栈：</span>
-                      <span class="value">Vue 3 + Vite + Element Plus + Spring Boot</span>
-                    </div>
-                    <div class="info-row">
-                      <span class="label">开发者：</span>
-                      <span class="value">超市管理系统开发团队</span>
-                    </div>
-                    <div class="info-row">
-                      <span class="label">发布日期：</span>
-                      <span class="value">2025-11-06</span>
-                    </div>
-                    <div class="info-row">
-                      <span class="label">许可证：</span>
-                      <span class="value">MIT License</span>
-                    </div>
+                  
+                  <div class="tech-stack">
+                    <h4>技术栈</h4>
+                    <el-row :gutter="10">
+                      <el-col :span="12">
+                        <div class="tech-item">
+                          <strong>前端：</strong>
+                          <el-tag size="small" style="margin-left: 5px;">Vue 3</el-tag>
+                          <el-tag size="small" style="margin-left: 5px;">Element Plus</el-tag>
+                          <el-tag size="small" style="margin-left: 5px;">Vite</el-tag>
+                        </div>
+                      </el-col>
+                      <el-col :span="12">
+                        <div class="tech-item">
+                          <strong>后端：</strong>
+                          <el-tag size="small" style="margin-left: 5px;">Spring Boot</el-tag>
+                          <el-tag size="small" style="margin-left: 5px;">MyBatis Plus</el-tag>
+                          <el-tag size="small" style="margin-left: 5px;">MySQL</el-tag>
+                        </div>
+                      </el-col>
+                    </el-row>
                   </div>
+                  
                   <el-divider />
-                  <div class="about-links">
-                    <el-button type="primary" text>查看文档</el-button>
-                    <el-button type="primary" text>检查更新</el-button>
-                    <el-button type="primary" text>反馈问题</el-button>
+                  
+                  <div class="copyright">
+                    <p>开发团队：超市管理系统开发组</p>
+                    <p>许可证：MIT License</p>
+                    <p>© 2024 超市进销存管理系统. All Rights Reserved.</p>
                   </div>
                 </div>
               </div>
@@ -236,228 +221,266 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import {
-  Setting,
-  Download,
-  Upload,
-  CircleCheck,
-  Delete,
-  ShoppingCart
-} from '@element-plus/icons-vue'
+import { Setting, Bell, Document, InfoFilled, Download, ShoppingCart } from '@element-plus/icons-vue'
+import settingsApi from '@/api/settings'
 
 const activeTab = ref('basic')
+const exportLoading = ref(false)
 
-// 系统基本设置
-const systemSettings = ref({
-  name: '超市进销存管理系统',
-  description: '专业的超市商品进销存管理解决方案'
-})
-
-// 外观设置
-const appearanceSettings = ref({
-  theme: 'light',
-  primaryColor: '#409eff',
-  layout: 'classic',
-  showBreadcrumb: true,
-  showTabs: false
-})
-
-// 通知设置
-const notificationSettings = ref({
-  lowStock: true,
+// 系统设置数据
+const settings = ref({
+  // 基本设置
+  systemName: '',
+  systemDescription: '',
+  
+  // 通知设置
+  inventoryWarning: true,
   orderAudit: true,
   systemNotice: true,
-  emailNotify: false
+  
+  // 安全设置
+  passwordExpireDays: 90,
+  loginFailTimes: 5,
+  sessionTimeout: 30,
+  strongPassword: true
 })
 
-// 安全设置
-const securitySettings = ref({
-  passwordExpireDays: 90,
-  lockAfterFailed: true,
-  maxFailedAttempts: 5,
-  lockDuration: 30,
-  strongPassword: false
-})
+// 加载设置
+const loadSettings = async () => {
+  try {
+    const response = await settingsApi.getSettings()
+    if (response.code === 200) {
+      // 合并服务器返回的数据
+      Object.assign(settings.value, response.data)
+    }
+  } catch (error) {
+    console.error('加载设置失败:', error)
+    ElMessage.error('加载设置失败')
+  }
+}
 
 // 保存设置
-const handleSave = () => {
-  ElMessage.success('设置已保存')
+const handleSave = async () => {
+  try {
+    const response = await settingsApi.saveSettings(settings.value)
+    if (response.code === 200) {
+      ElMessage.success('保存成功')
+      // 重新加载设置
+      await loadSettings()
+    } else {
+      ElMessage.error(response.message || '保存失败')
+    }
+  } catch (error) {
+    console.error('保存设置失败:', error)
+    ElMessage.error('保存失败')
+  }
 }
+
+// 导出商品数据
+const handleExportProducts = async () => {
+  try {
+    exportLoading.value = true
+    const response = await settingsApi.exportProducts()
+    
+    // 创建下载链接
+    const blob = new Blob([response], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `商品信息_${new Date().getTime()}.xlsx`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    
+    ElMessage.success('导出成功')
+  } catch (error) {
+    console.error('导出失败:', error)
+    ElMessage.error('导出失败')
+  } finally {
+    exportLoading.value = false
+  }
+}
+
+// 页面加载时获取设置
+onMounted(() => {
+  loadSettings()
+})
 </script>
 
-<style scoped lang="scss">
+<style lang="scss" scoped>
 .settings-container {
   padding: 20px;
-
+  
   .settings-header {
     margin-bottom: 20px;
-
+    
     .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      
       .title-section {
         h2 {
-          margin: 0 0 8px 0;
+          margin: 0;
           font-size: 24px;
-          font-weight: 600;
+          color: #303133;
           display: flex;
           align-items: center;
           gap: 8px;
         }
-
+        
         .subtitle {
-          margin: 0;
+          margin: 8px 0 0 0;
           color: #909399;
           font-size: 14px;
         }
       }
     }
   }
-
+  
   .settings-section {
     padding: 20px;
-
+    
     .section-title {
+      margin: 0 0 20px 0;
       font-size: 18px;
-      font-weight: 600;
       color: #303133;
-      margin: 0 0 24px;
-      padding-bottom: 12px;
-      border-bottom: 2px solid #f0f0f0;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #EBEEF5;
     }
-
+    
     .form-tip {
-      margin-left: 12px;
-      font-size: 12px;
+      margin-left: 10px;
       color: #909399;
+      font-size: 12px;
     }
   }
-
+  
   .notification-list {
     .notification-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 20px;
-      margin-bottom: 12px;
-      background: #fafafa;
+      margin-bottom: 15px;
+      background: #f5f7fa;
       border-radius: 8px;
-      transition: all 0.3s ease;
-
+      transition: all 0.3s;
+      
       &:hover {
-        background: #f0f0f0;
+        background: #ecf5ff;
       }
-
+      
       .notification-info {
+        flex: 1;
+        
         .notification-title {
-          font-size: 15px;
-          font-weight: 600;
+          font-size: 16px;
           color: #303133;
-          margin-bottom: 4px;
+          font-weight: 500;
+          margin-bottom: 8px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
-
+        
         .notification-desc {
-          font-size: 13px;
-          color: #909399;
+          color: #606266;
+          font-size: 14px;
         }
       }
     }
   }
-
-  .data-actions {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 20px;
-
-    .action-card {
-      text-align: center;
-      padding: 24px;
-      transition: all 0.3s ease;
-      cursor: pointer;
-
-      &:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      }
-
-      .action-icon {
-        font-size: 48px;
-        margin-bottom: 16px;
-      }
-
+  
+  .data-card {
+    text-align: center;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+    
+    &:hover {
+      transform: translateY(-5px);
+    }
+    
+    .data-card-icon {
+      margin-bottom: 15px;
+    }
+    
+    .data-card-content {
       h4 {
-        margin: 0 0 8px;
+        margin: 10px 0;
         font-size: 16px;
         color: #303133;
       }
-
+      
       p {
-        margin: 0 0 16px;
-        font-size: 13px;
         color: #909399;
+        font-size: 14px;
+        margin: 10px 0;
       }
     }
   }
-
+  
   .about-content {
     text-align: center;
-    padding: 40px 20px;
-
+    padding: 40px;
+    
     .about-logo {
       margin-bottom: 20px;
     }
-
+    
     h2 {
-      font-size: 28px;
-      font-weight: 700;
+      margin: 10px 0;
       color: #303133;
-      margin: 0 0 8px;
     }
-
+    
     .version {
-      font-size: 14px;
       color: #909399;
-      margin-bottom: 32px;
+      font-size: 14px;
+      margin: 10px 0;
     }
-
-    .about-info {
-      max-width: 500px;
-      margin: 0 auto;
+    
+    .description {
+      color: #606266;
+      font-size: 14px;
+      margin: 20px auto;
+      max-width: 600px;
+      line-height: 1.8;
+    }
+    
+    .tech-stack {
       text-align: left;
-
-      .info-row {
-        display: flex;
-        padding: 12px 0;
-        border-bottom: 1px solid #f0f0f0;
-
-        .label {
-          width: 120px;
-          font-weight: 600;
+      max-width: 600px;
+      margin: 0 auto;
+      
+      h4 {
+        margin-bottom: 15px;
+        color: #303133;
+      }
+      
+      .tech-item {
+        margin-bottom: 15px;
+        
+        strong {
           color: #606266;
-        }
-
-        .value {
-          flex: 1;
-          color: #303133;
-        }
-
-        &:last-child {
-          border-bottom: none;
         }
       }
     }
-
-    .about-links {
-      margin-top: 32px;
-      display: flex;
-      justify-content: center;
-      gap: 20px;
+    
+    .copyright {
+      margin-top: 30px;
+      color: #909399;
+      font-size: 12px;
+      
+      p {
+        margin: 8px 0;
+      }
     }
-  }
-
-  :deep(.el-tabs--left .el-tabs__nav) {
-    min-width: 150px;
   }
 }
 </style>
-

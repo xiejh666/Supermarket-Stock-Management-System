@@ -23,6 +23,15 @@ public interface SysUserMapper extends BaseMapper<SysUser> {
             "LEFT JOIN sys_role r ON u.role_id = r.id " +
             "WHERE u.username = #{username}")
     SysUser selectByUsernameWithRole(@Param("username") String username);
+    
+    /**
+     * 根据用户ID查询用户（包含角色信息）
+     */
+    @Select("SELECT u.*, r.role_name, r.role_code " +
+            "FROM sys_user u " +
+            "LEFT JOIN sys_role r ON u.role_id = r.id " +
+            "WHERE u.id = #{userId}")
+    SysUser selectUserWithRole(@Param("userId") Long userId);
 
     /**
      * 查询用户列表（包含角色信息）

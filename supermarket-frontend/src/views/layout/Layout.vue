@@ -146,9 +146,9 @@
             <div class="notification-list">
               <div
                 v-for="(item, index) in filteredNotifications"
-                :key="index"
+                :key="item.id"
                 class="notification-item"
-                :class="{ 'unread': !item.read }"
+                :class="{ 'unread': !item.isRead }"
                 @click="markAsRead(index)"
               >
                 <div class="notification-icon" :class="item.type">
@@ -159,9 +159,9 @@
                 <div class="notification-content">
                   <div class="notification-title">{{ item.title }}</div>
                   <div class="notification-desc">{{ item.content }}</div>
-                  <div class="notification-time">{{ item.time }}</div>
+                  <div class="notification-time">{{ formatTime(item.createTime) }}</div>
                 </div>
-                <el-icon v-if="!item.read" class="unread-dot" color="#409eff">
+                <el-icon v-if="!item.isRead" class="unread-dot" color="#409eff">
                   <SuccessFilled />
                 </el-icon>
               </div>
@@ -172,7 +172,7 @@
             <div class="notification-list">
               <div
                 v-for="(item, index) in unreadNotifications"
-                :key="index"
+                :key="item.id"
                 class="notification-item unread"
                 @click="markAsRead(notifications.indexOf(item))"
               >
@@ -184,7 +184,7 @@
                 <div class="notification-content">
                   <div class="notification-title">{{ item.title }}</div>
                   <div class="notification-desc">{{ item.content }}</div>
-                  <div class="notification-time">{{ item.time }}</div>
+                  <div class="notification-time">{{ formatTime(item.createTime) }}</div>
                 </div>
                 <el-icon class="unread-dot" color="#409eff">
                   <SuccessFilled />
@@ -228,6 +228,13 @@ import {
   InfoFilled,
   CircleCheck
 } from '@element-plus/icons-vue'
+import { 
+  getMessageList, 
+  getUnreadCount, 
+  markMessageAsRead, 
+  markAllMessagesAsRead, 
+  clearAllMessages 
+} from '@/api/message'
 
 const router = useRouter()
 const route = useRoute()
@@ -237,47 +244,15 @@ const isCollapsed = ref(false)
 const showNotifications = ref(false)
 const notificationTab = ref('all')
 
-// 消息通知数据
-const notifications = ref([
-  {
-    id: 1,
-    type: 'success',
-    title: '系统通知',
-    content: '欢迎使用超市进销存管理系统！',
-    time: '刚刚',
-    read: false
-  },
-  {
-    id: 2,
-    type: 'warning',
-    title: '库存预警',
-    content: '商品"可口可乐"库存低于预警值，请及时补货',
-    time: '10分钟前',
-    read: false
-  },
-  {
-    id: 3,
-    type: 'info',
-    title: '订单提醒',
-    content: '您有1个待审核的采购订单',
-    time: '1小时前',
-    read: false
-  },
-  {
-    id: 4,
-    type: 'success',
-    title: '采购完成',
-    content: '采购订单 #PO202411060001 已入库',
-    time: '2小时前',
-    read: true
-  }
-])
+// 消息通知数据（从API动态获取）
+const notifications = ref([])
+const unreadCountValue = ref(0)
 
 const userInfo = computed(() => userStore.userInfo || {})
 const activeMenu = computed(() => route.path)
-const unreadCount = computed(() => notifications.value.filter(n => !n.read).length)
+const unreadCount = computed(() => unreadCountValue.value)
 const filteredNotifications = computed(() => notifications.value)
-const unreadNotifications = computed(() => notifications.value.filter(n => !n.read))
+const unreadNotifications = computed(() => notifications.value.filter(n => !n.isRead))
 
 const currentRoute = computed(() => {
   const routeMap = {
@@ -303,6 +278,34 @@ const handleMenuSelect = (index) => {
   router.push(index)
 }
 
+// 格式化时间显示
+const formatTime = (time) => {
+  if (!time) return ''
+  const date = new Date(time)
+  const now = new Date()
+  const diff = now - date
+  const minute = 60 * 1000
+  const hour = 60 * minute
+  const day = 24 * hour
+  
+  if (diff < minute) {
+    return '刚刚'
+  } else if (diff < hour) {
+    return Math.floor(diff / minute) + '分钟前'
+  } else if (diff < day) {
+    return Math.floor(diff / hour) + '小时前'
+  } else if (diff < 2 * day) {
+    return '昨天 ' + date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+  } else {
+    return date.toLocaleString('zh-CN', { 
+      month: '2-digit', 
+      day: '2-digit', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })
+  }
+}
+
 // 获取通知图标
 const getNotificationIcon = (type) => {
   const iconMap = {
@@ -314,15 +317,79 @@ const getNotificationIcon = (type) => {
   return iconMap[type] || InfoFilled
 }
 
-// 标记消息为已读
-const markAsRead = (index) => {
-  notifications.value[index].read = true
+// 获取消息列表
+const fetchMessages = async () => {
+  try {
+    const res = await getMessageList(false)
+    if (res.code === 200) {
+      notifications.value = res.data || []
+    }
+  } catch (error) {
+    console.error('获取消息列表失败:', error)
+  }
+}
+
+// 获取未读消息数量
+const fetchUnreadCount = async () => {
+  try {
+    const res = await getUnreadCount()
+    if (res.code === 200) {
+      unreadCountValue.value = res.data || 0
+    }
+  } catch (error) {
+    console.error('获取未读消息数量失败:', error)
+  }
+}
+
+// 标记消息为已读（并处理跳转）
+const markAsRead = async (index) => {
+  const message = notifications.value[index]
+  
+  // 如果消息未读，标记为已读
+  if (!message.isRead) {
+    try {
+      await markMessageAsRead(message.id)
+      message.isRead = true
+      unreadCountValue.value = Math.max(0, unreadCountValue.value - 1)
+    } catch (error) {
+      console.error('标记消息为已读失败:', error)
+      ElMessage.error('操作失败')
+      return
+    }
+  }
+  
+  // 根据消息类型跳转到对应页面
+  if (message.linkType) {
+    showNotifications.value = false // 关闭抽屉
+    
+    const routeMap = {
+      'purchase': '/purchase',
+      'sale': '/sale',
+      'inventory': '/inventory',
+      'product': '/product',
+      'supplier': '/supplier',
+      'user': '/user'
+    }
+    
+    const targetRoute = routeMap[message.linkType]
+    if (targetRoute) {
+      router.push(targetRoute)
+      ElMessage.success('已跳转到' + message.linkType + '管理页面')
+    }
+  }
 }
 
 // 全部标记为已读
-const markAllAsRead = () => {
-  notifications.value.forEach(n => n.read = true)
-  ElMessage.success('已全部标记为已读')
+const markAllAsRead = async () => {
+  try {
+    await markAllMessagesAsRead()
+    notifications.value.forEach(n => n.isRead = true)
+    unreadCountValue.value = 0
+    ElMessage.success('已全部标记为已读')
+  } catch (error) {
+    console.error('标记全部已读失败:', error)
+    ElMessage.error('操作失败')
+  }
 }
 
 // 清空所有消息
@@ -331,9 +398,16 @@ const clearAll = () => {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    notifications.value = []
-    ElMessage.success('已清空所有消息')
+  }).then(async () => {
+    try {
+      await clearAllMessages()
+      notifications.value = []
+      unreadCountValue.value = 0
+      ElMessage.success('已清空所有消息')
+    } catch (error) {
+      console.error('清空消息失败:', error)
+      ElMessage.error('操作失败')
+    }
   }).catch(() => {})
 }
 
@@ -367,6 +441,15 @@ onMounted(() => {
   if (!userInfo.value || !userInfo.value.username) {
     router.push('/login')
   }
+  
+  // 获取消息列表和未读数量
+  fetchMessages()
+  fetchUnreadCount()
+  
+  // 定时刷新未读消息数量（每30秒）
+  setInterval(() => {
+    fetchUnreadCount()
+  }, 30000)
 })
 </script>
 

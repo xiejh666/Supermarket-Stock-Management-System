@@ -23,20 +23,10 @@
             <el-button type="primary" size="small" @click="showAvatarDialog = true" style="margin-top: 12px">
               更换头像
             </el-button>
-            <h3 class="user-name">{{ userInfo.realName || userInfo.username }}</h3>
-            <el-tag :type="getRoleType(userInfo.roleCode)" class="user-role-tag">
-              {{ userInfo.roleName }}
+            <h3 class="user-name">{{ form.realName || form.username }}</h3>
+            <el-tag :type="getRoleType(form.roleCode)" class="user-role-tag">
+              {{ form.roleName }}
             </el-tag>
-            <div class="user-stats">
-              <div class="stat-item">
-                <div class="stat-value">{{ loginDays }}</div>
-                <div class="stat-label">连续登录（天）</div>
-              </div>
-              <div class="stat-item">
-                <div class="stat-value">{{ lastLoginTime }}</div>
-                <div class="stat-label">最后登录</div>
-              </div>
-            </div>
           </div>
         </el-card>
       </el-col>
@@ -111,7 +101,7 @@
                   <el-input
                     v-model="passwordForm.newPassword"
                     type="password"
-                    placeholder="请输入新密码"
+                    placeholder="请输入新密码（6-20位）"
                     show-password
                   >
                     <template #prefix>
@@ -145,13 +135,17 @@
               <div class="security-list">
                 <div class="security-item">
                   <div class="security-info">
-                    <el-icon class="security-icon" color="#67c23a"><CircleCheck /></el-icon>
+                    <el-icon class="security-icon" :color="form.status === 1 ? '#67c23a' : '#f56c6c'">
+                      <CircleCheck />
+                    </el-icon>
                     <div>
                       <div class="security-title">账号状态</div>
-                      <div class="security-desc">您的账号状态正常</div>
+                      <div class="security-desc">{{ form.status === 1 ? '您的账号状态正常' : '您的账号已被禁用' }}</div>
                     </div>
                   </div>
-                  <el-tag type="success">正常</el-tag>
+                  <el-tag :type="form.status === 1 ? 'success' : 'danger'">
+                    {{ form.status === 1 ? '正常' : '禁用' }}
+                  </el-tag>
                 </div>
                 <div class="security-item">
                   <div class="security-info">
@@ -161,7 +155,9 @@
                       <div class="security-desc">{{ form.phone || '未绑定手机号' }}</div>
                     </div>
                   </div>
-                  <el-button type="primary" text>{{ form.phone ? '修改' : '绑定' }}</el-button>
+                  <el-button type="primary" text @click="activeTab = 'basic'">
+                    {{ form.phone ? '修改' : '绑定' }}
+                  </el-button>
                 </div>
                 <div class="security-item">
                   <div class="security-info">
@@ -171,7 +167,9 @@
                       <div class="security-desc">{{ form.email || '未绑定邮箱' }}</div>
                     </div>
                   </div>
-                  <el-button type="primary" text>{{ form.email ? '修改' : '绑定' }}</el-button>
+                  <el-button type="primary" text @click="activeTab = 'basic'">
+                    {{ form.email ? '修改' : '绑定' }}
+                  </el-button>
                 </div>
                 <div class="security-item">
                   <div class="security-info">
@@ -224,6 +222,7 @@ import {
   Avatar,
   CircleCheck
 } from '@element-plus/icons-vue'
+import { getUserProfile, updateProfile, changePassword } from '@/api/profile'
 
 const userStore = useUserStore()
 const activeTab = ref('basic')
@@ -232,10 +231,6 @@ const passwordFormRef = ref(null)
 const saving = ref(false)
 const changingPassword = ref(false)
 const showAvatarDialog = ref(false)
-
-const userInfo = computed(() => userStore.userInfo || {})
-const loginDays = ref(7)
-const lastLoginTime = ref('2小时前')
 
 // 头像列表
 const avatarList = ref([
@@ -249,12 +244,18 @@ const avatarUrl = ref('https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e5
 
 // 基本信息表单
 const form = ref({
+  id: null,
   username: '',
   realName: '',
   phone: '',
   email: '',
-  roleName: ''
+  roleName: '',
+  roleCode: '',
+  status: 1
 })
+
+// 原始表单数据（用于重置）
+const originalForm = ref({})
 
 const rules = {
   realName: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }],
@@ -277,8 +278,8 @@ const passwordForm = ref({
 const validatePassword = (rule, value, callback) => {
   if (value === '') {
     callback(new Error('请输入新密码'))
-  } else if (value.length < 6) {
-    callback(new Error('密码长度不能小于6位'))
+  } else if (value.length < 6 || value.length > 20) {
+    callback(new Error('密码长度必须在6-20位之间'))
   } else {
     callback()
   }
@@ -321,36 +322,68 @@ const handleSaveAvatar = () => {
   ElMessage.success('头像更新成功')
 }
 
+// 获取用户信息
+const fetchUserProfile = async () => {
+  try {
+    const res = await getUserProfile()
+    if (res.code === 200) {
+      form.value = {
+        id: res.data.id,
+        username: res.data.username,
+        realName: res.data.realName || '',
+        phone: res.data.phone || '',
+        email: res.data.email || '',
+        roleName: res.data.roleName || '',
+        roleCode: res.data.roleCode || '',
+        status: res.data.status
+      }
+      // 保存原始数据
+      originalForm.value = { ...form.value }
+    }
+  } catch (error) {
+    console.error('获取用户信息失败:', error)
+    ElMessage.error('获取用户信息失败')
+  }
+}
+
 // 保存基本信息
 const handleSave = async () => {
   try {
     await formRef.value.validate()
     saving.value = true
     
-    // TODO: 调用API保存用户信息
-    setTimeout(() => {
-      saving.value = false
+    const res = await updateProfile({
+      realName: form.value.realName,
+      phone: form.value.phone,
+      email: form.value.email
+    })
+    
+    if (res.code === 200) {
       ElMessage.success('保存成功')
+      // 更新原始数据
+      originalForm.value = { ...form.value }
       // 更新store中的用户信息
       userStore.setUserInfo({
-        ...userInfo.value,
-        ...form.value
+        ...userStore.userInfo,
+        realName: form.value.realName,
+        phone: form.value.phone,
+        email: form.value.email
       })
-    }, 1000)
+    } else {
+      ElMessage.error(res.message || '保存失败')
+    }
   } catch (error) {
-    console.error('验证失败:', error)
+    console.error('保存失败:', error)
+    ElMessage.error('保存失败')
+  } finally {
+    saving.value = false
   }
 }
 
 // 重置基本信息表单
 const handleReset = () => {
-  form.value = {
-    username: userInfo.value.username || '',
-    realName: userInfo.value.realName || '',
-    phone: userInfo.value.phone || '',
-    email: userInfo.value.email || '',
-    roleName: userInfo.value.roleName || ''
-  }
+  form.value = { ...originalForm.value }
+  formRef.value?.clearValidate()
 }
 
 // 修改密码
@@ -359,14 +392,29 @@ const handleChangePassword = async () => {
     await passwordFormRef.value.validate()
     changingPassword.value = true
     
-    // TODO: 调用API修改密码
-    setTimeout(() => {
-      changingPassword.value = false
+    const res = await changePassword({
+      oldPassword: passwordForm.value.oldPassword,
+      newPassword: passwordForm.value.newPassword,
+      confirmPassword: passwordForm.value.confirmPassword
+    })
+    
+    if (res.code === 200) {
       ElMessage.success('密码修改成功，请重新登录')
+      // 清空密码表单
       resetPasswordForm()
-    }, 1000)
+      // 3秒后退出登录
+      setTimeout(() => {
+        userStore.logout()
+        window.location.href = '/login'
+      }, 3000)
+    } else {
+      ElMessage.error(res.message || '修改密码失败')
+    }
   } catch (error) {
-    console.error('验证失败:', error)
+    console.error('修改密码失败:', error)
+    ElMessage.error('修改密码失败')
+  } finally {
+    changingPassword.value = false
   }
 }
 
@@ -377,161 +425,183 @@ const resetPasswordForm = () => {
     newPassword: '',
     confirmPassword: ''
   }
-  passwordFormRef.value?.resetFields()
+  passwordFormRef.value?.clearValidate()
 }
 
 onMounted(() => {
-  // 初始化表单数据
-  handleReset()
+  fetchUserProfile()
 })
 </script>
 
 <style scoped lang="scss">
 .profile-container {
   padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
 
+.profile-header {
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+
+  :deep(.el-card__body) {
+    padding: 30px;
+  }
+
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    h2 {
+      margin: 0 0 8px 0;
+      font-size: 28px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      .el-icon {
+        font-size: 32px;
+      }
+    }
+
+    .subtitle {
+      margin: 0;
+      opacity: 0.9;
+      font-size: 14px;
+    }
+  }
+}
+
+.user-card {
+  :deep(.el-card__body) {
+    padding: 30px 20px;
+  }
+}
+
+.user-profile {
+  text-align: center;
+
+  .user-avatar {
+    margin-bottom: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .user-name {
+    margin: 16px 0 8px 0;
+    font-size: 20px;
+    font-weight: 500;
+  }
+
+  .user-role-tag {
+    font-size: 12px;
+  }
+}
+
+.info-card {
+  :deep(.el-tabs__nav-wrap::after) {
+    display: none;
+  }
+
+  :deep(.el-tabs__item) {
+    font-size: 15px;
+    padding: 0 30px;
+  }
+
+  :deep(.el-form) {
+    max-width: 600px;
+    padding: 20px 0;
+  }
+}
+
+.security-list {
+  padding: 20px 0;
+}
+
+.security-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  margin-bottom: 16px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  transition: all 0.3s;
+
+  &:hover {
+    background: #e8edf3;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.security-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  .security-icon {
+    font-size: 24px;
+  }
+
+  .security-title {
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .security-desc {
+    font-size: 13px;
+    color: #909399;
+  }
+}
+
+.avatar-options {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  padding: 20px 0;
+}
+
+.avatar-option {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+
+  &:hover {
+    border-color: #409eff;
+    background: #ecf5ff;
+  }
+
+  &.active {
+    border-color: #409eff;
+    background: #ecf5ff;
+  }
+}
+
+@media (max-width: 768px) {
   .profile-header {
-    margin-bottom: 20px;
-
-    .header-content {
-      .title-section {
-        h2 {
-          margin: 0 0 8px 0;
-          font-size: 24px;
-          font-weight: 600;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .subtitle {
-          margin: 0;
-          color: #909399;
-          font-size: 14px;
-        }
-      }
-    }
-  }
-
-  .user-card {
-    .user-profile {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+    :deep(.el-card__body) {
       padding: 20px;
-
-      .user-avatar {
-        margin-bottom: 16px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      }
-
-      .user-name {
-        margin: 12px 0 8px;
-        font-size: 20px;
-        font-weight: 600;
-        color: #303133;
-      }
-
-      .user-role-tag {
-        margin-bottom: 20px;
-      }
-
-      .user-stats {
-        width: 100%;
-        display: flex;
-        justify-content: space-around;
-        padding-top: 20px;
-        border-top: 1px solid #ebeef5;
-
-        .stat-item {
-          text-align: center;
-
-          .stat-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: #409eff;
-            margin-bottom: 4px;
-          }
-
-          .stat-label {
-            font-size: 12px;
-            color: #909399;
-          }
-        }
-      }
     }
-  }
 
-  .info-card {
-    min-height: 500px;
-
-    :deep(.el-tabs__content) {
-      padding: 20px 0;
-    }
-  }
-
-  .security-list {
-    .security-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 20px;
-      margin-bottom: 12px;
-      background: #fafafa;
-      border-radius: 8px;
-      transition: all 0.3s ease;
-
-      &:hover {
-        background: #f0f0f0;
-        transform: translateX(4px);
-      }
-
-      .security-info {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-
-        .security-icon {
-          font-size: 28px;
-        }
-
-        .security-title {
-          font-size: 15px;
-          font-weight: 600;
-          color: #303133;
-          margin-bottom: 4px;
-        }
-
-        .security-desc {
-          font-size: 13px;
-          color: #909399;
-        }
-      }
+    h2 {
+      font-size: 22px;
     }
   }
 
   .avatar-options {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    padding: 20px;
-
-    .avatar-option {
-      cursor: pointer;
-      border: 3px solid transparent;
-      border-radius: 50%;
-      transition: all 0.3s ease;
-
-      &:hover {
-        transform: scale(1.1);
-      }
-
-      &.active {
-        border-color: #409eff;
-        box-shadow: 0 0 12px rgba(64, 158, 255, 0.3);
-      }
-    }
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 </style>
-
