@@ -39,3 +39,4 @@ INSERT INTO `user_config` (`user_id`, `config_key`, `config_value`) VALUES
 (1, 'notification.order_audit', 'true'),
 (1, 'notification.system_notice', 'true');
 
+

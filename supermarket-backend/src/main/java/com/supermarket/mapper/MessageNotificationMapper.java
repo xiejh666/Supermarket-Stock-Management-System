@@ -24,3 +24,4 @@ public interface MessageNotificationMapper extends BaseMapper<MessageNotificatio
     int markAllAsRead(@Param("userId") Long userId, @Param("roleCode") String roleCode);
 }
 
+

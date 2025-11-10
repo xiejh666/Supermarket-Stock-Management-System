@@ -24,3 +24,4 @@ public class SystemSettingsDTO {
     private Boolean strongPassword;
 }
 
+

@@ -61,3 +61,4 @@ public interface MessageNotificationService extends IService<MessageNotification
     Boolean clearAllMessages(Long userId, String roleCode);
 }
 
+
