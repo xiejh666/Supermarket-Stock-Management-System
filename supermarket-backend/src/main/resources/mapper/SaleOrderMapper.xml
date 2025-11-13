@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.supermarket.mapper.SaleOrderMapper">
+
+    <!-- 获取销售趋势数据 - 按天统计 -->
+    <select id="getSalesTrendByDay" resultType="map">
+        SELECT 
+            order_date as date,
+            DATE_FORMAT(order_date, '%m-%d') as label,
+            ROUND(COALESCE(SUM(total_amount), 0), 2) as salesAmount,
+            COUNT(*) as orderCount
+        FROM (
+            SELECT DATE(create_time) as order_date, total_amount
+            FROM sale_order 
+            WHERE status = 1 
+              AND create_time BETWEEN #{startDate} AND #{endDate}
+        ) t
+        GROUP BY order_date
+        ORDER BY order_date
+    </select>
+
+    <!-- 获取销售趋势数据 - 按月统计 -->
+    <select id="getSalesTrendByMonth" resultType="map">
+        SELECT 
+            order_month as month,
+            CONCAT(order_month, '月') as label,
+            ROUND(COALESCE(SUM(total_amount), 0), 2) as salesAmount,
+            COUNT(*) as orderCount
+        FROM (
+            SELECT MONTH(create_time) as order_month, total_amount
+            FROM sale_order 
+            WHERE status = 1 
+              AND YEAR(create_time) = #{year}
+              AND MONTH(create_time) &lt;= #{currentMonth}
+        ) t
+        GROUP BY order_month
+        ORDER BY order_month
+    </select>
+
+</mapper>

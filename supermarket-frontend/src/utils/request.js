@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
-import { getToken, removeToken } from '@/utils/auth'
+import { getToken, removeToken, isTokenValid } from '@/utils/auth'
 import router from '@/router'
 
 const service = axios.create({
@@ -12,6 +12,16 @@ const service = axios.create({
 service.interceptors.request.use(
   config => {
     const token = getToken()
+    
+    // 检查Token是否过期
+    if (token && !isTokenValid()) {
+      // Token已过期，清除并跳转登录页
+      removeToken()
+      ElMessage.warning('登录已过期，请重新登录')
+      router.push('/login')
+      return Promise.reject(new Error('Token已过期'))
+    }
+    
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`
     }

@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { getToken } from '@/utils/auth'
+import { getToken, isTokenValid, removeToken } from '@/utils/auth'
 
 const routes = [
   {
@@ -91,13 +91,23 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const token = getToken()
   
-  if (to.meta.requiresAuth && !token) {
-    next('/login')
-  } else if (to.path === '/login' && token) {
-    next('/')
-  } else {
-    next()
+  // 检查需要认证的页面
+  if (to.meta.requiresAuth) {
+    if (!token || !isTokenValid()) {
+      // Token不存在或已过期，清除Token并跳转登录页
+      removeToken()
+      next('/login')
+      return
+    }
   }
+  
+  // 如果已登录且Token有效，访问登录页时跳转到首页
+  if (to.path === '/login' && token && isTokenValid()) {
+    next('/')
+    return
+  }
+  
+  next()
 })
 
 export default router

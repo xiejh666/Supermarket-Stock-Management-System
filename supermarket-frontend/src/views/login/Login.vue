@@ -34,10 +34,11 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { ElMessage } from 'element-plus'
+import { removeToken } from '@/utils/auth'
 import request from '@/utils/request'
 
 const router = useRouter()
@@ -58,6 +59,11 @@ const loginRules = {
     { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
   ]
 }
+
+// 页面加载时清除旧Token
+onMounted(() => {
+  removeToken()
+})
 
 const handleLogin = async () => {
   if (!loginFormRef.value) return
