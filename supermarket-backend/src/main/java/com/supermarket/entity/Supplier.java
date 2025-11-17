@@ -17,7 +17,7 @@ public class Supplier {
     private String supplierName;
     
     @TableField("contact_person")
-    private String contactName;
+    private String contactPerson;
     
     @TableField("phone")
     private String contactPhone;

@@ -25,7 +25,7 @@
             <template #title>首页仪表盘</template>
           </el-menu-item>
           
-          <el-sub-menu index="product">
+          <el-sub-menu index="product-menu">
             <template #title>
               <el-icon><Goods /></el-icon>
               <span>商品管理</span>
@@ -545,11 +545,32 @@ onMounted(() => {
 :deep(.el-sub-menu .el-menu-item) {
   background: transparent;
   color: rgba(255, 255, 255, 0.7);
+  min-height: 40px;
+  line-height: 40px;
+  padding-left: 48px !important;
 }
 
 :deep(.el-sub-menu .el-menu-item:hover) {
   background: rgba(255, 255, 255, 0.1) !important;
   color: white;
+}
+
+:deep(.el-sub-menu .el-menu-item.is-active) {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: white;
+  font-weight: 600;
+}
+
+:deep(.el-sub-menu__title) {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+:deep(.el-sub-menu.is-opened .el-sub-menu__title) {
+  color: white !important;
+}
+
+:deep(.el-menu--inline) {
+  background-color: rgba(0, 0, 0, 0.1) !important;
 }
 
 .sidebar-footer {

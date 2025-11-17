@@ -22,6 +22,9 @@ public class PurchaseOrderDTO {
     @ApiModelProperty(value = "供应商ID", required = true)
     @NotNull(message = "供应商不能为空")
     private Long supplierId;
+    
+    @ApiModelProperty(value = "采购日期")
+    private String purchaseDate;
 
     @ApiModelProperty(value = "采购明细列表", required = true)
     @NotEmpty(message = "采购明细不能为空")

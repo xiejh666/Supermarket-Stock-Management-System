@@ -56,6 +56,10 @@ public class PurchaseOrderVO {
     @ApiModelProperty("审核备注")
     private String auditRemark;
 
+    @ApiModelProperty("入库时间")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime inboundTime;
+
     @ApiModelProperty("创建时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;

@@ -25,9 +25,13 @@ public class PurchaseOrderItemDTO {
     @Min(value = 1, message = "数量必须大于0")
     private Integer quantity;
 
-    @ApiModelProperty(value = "单价", required = true)
-    @NotNull(message = "单价不能为空")
-    @DecimalMin(value = "0.01", message = "单价必须大于0")
+    @ApiModelProperty(value = "采购单价", required = true)
+    @NotNull(message = "采购单价不能为空")
+    @DecimalMin(value = "0.01", message = "采购单价必须大于0")
+    private BigDecimal purchasePrice;
+    
+    // 内部映射字段，用于兼容
+    @ApiModelProperty(value = "单价（内部使用）")
     private BigDecimal unitPrice;
 }
 

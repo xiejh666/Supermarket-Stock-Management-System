@@ -36,18 +36,34 @@ public class ProductDTO {
     @ApiModelProperty("单位")
     private String unit;
 
+    @ApiModelProperty("规格")
+    private String specification;
+
+    // price字段保留用于内部映射，不做验证（前端使用retailPrice）
+    @ApiModelProperty(value = "零售价（内部使用）")
+    private BigDecimal price;
+
+    // 前端统一使用retailPrice字段
     @ApiModelProperty(value = "零售价", required = true)
     @NotNull(message = "零售价不能为空")
     @DecimalMin(value = "0.00", message = "零售价必须大于等于0")
-    private BigDecimal price;
+    private BigDecimal retailPrice;
 
     @ApiModelProperty(value = "成本价", required = true)
     @NotNull(message = "成本价不能为空")
     @DecimalMin(value = "0.00", message = "成本价必须大于等于0")
     private BigDecimal costPrice;
 
-    @ApiModelProperty("商品图片URL")
+    // image字段保留用于内部映射（前端使用imageUrl）
+    @ApiModelProperty("商品图片URL（内部使用）")
     private String image;
+
+    // 前端统一使用imageUrl字段
+    @ApiModelProperty("商品图片URL")
+    private String imageUrl;
+    
+    @ApiModelProperty("预警库存")
+    private Integer warningStock;
 
     @ApiModelProperty("商品描述")
     private String description;

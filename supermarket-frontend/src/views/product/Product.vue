@@ -114,12 +114,81 @@
       />
     </el-card>
 
+    <!-- 查看详情对话框 -->
+    <el-dialog
+      v-model="viewDialogVisible"
+      title="商品详情"
+      width="700px"
+      :close-on-click-modal="false"
+    >
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="商品编码">
+          {{ viewData.productCode }}
+        </el-descriptions-item>
+        <el-descriptions-item label="商品名称">
+          {{ viewData.productName }}
+        </el-descriptions-item>
+        <el-descriptions-item label="商品分类">
+          {{ getCategoryName(viewData.categoryId) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="规格">
+          {{ viewData.specification || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="单位">
+          {{ viewData.unit || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="成本价">
+          <span class="price">¥{{ viewData.costPrice }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="零售价">
+          <span class="price primary">¥{{ viewData.retailPrice }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="库存">
+          <el-tag :type="viewData.stock <= viewData.warningStock ? 'danger' : 'success'">
+            {{ viewData.stock }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="预警库存">
+          {{ viewData.warningStock }}
+        </el-descriptions-item>
+        <el-descriptions-item label="状态">
+          <el-tag :type="viewData.status === 1 ? 'success' : 'info'">
+            {{ viewData.status === 1 ? '上架' : '下架' }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="商品图片" :span="2">
+          <el-image
+            v-if="viewData.imageUrl"
+            :src="viewData.imageUrl"
+            style="width: 100px; height: 100px"
+            fit="cover"
+            :preview-src-list="[viewData.imageUrl]"
+          />
+          <span v-else>-</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="商品描述" :span="2">
+          {{ viewData.description || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="创建时间" :span="2">
+          {{ formatTime(viewData.createTime) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="更新时间" :span="2">
+          {{ formatTime(viewData.updateTime) }}
+        </el-descriptions-item>
+      </el-descriptions>
+      <template #footer>
+        <el-button @click="viewDialogVisible = false">关闭</el-button>
+        <el-button type="primary" @click="handleEditFromView">编辑</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 新增/编辑对话框 -->
     <el-dialog
       v-model="dialogVisible"
       :title="dialogTitle"
       width="600px"
       :close-on-click-modal="false"
+      @open="handleDialogOpen"
     >
       <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
         <el-form-item label="商品名称" prop="productName">
@@ -220,13 +289,15 @@ import {
   deleteProduct,
   updateProductStatus
 } from '@/api/product'
-import { getCategoryTree } from '@/api/category'
+import { getAllCategories } from '@/api/category'
 
 const loading = ref(false)
 const submitLoading = ref(false)
 const dialogVisible = ref(false)
+const viewDialogVisible = ref(false)
 const dialogTitle = ref('新增商品')
 const formRef = ref(null)
+const viewData = ref({})
 
 const queryForm = reactive({
   productName: '',
@@ -262,8 +333,12 @@ const rules = {
   productName: [{ required: true, message: '请输入商品名称', trigger: 'blur' }],
   productCode: [{ required: true, message: '请输入商品编码', trigger: 'blur' }],
   categoryId: [{ required: true, message: '请选择商品分类', trigger: 'change' }],
-  costPrice: [{ required: true, message: '请输入成本价', trigger: 'blur' }],
-  retailPrice: [{ required: true, message: '请输入零售价', trigger: 'blur' }]
+  costPrice: [
+    { required: true, message: '请输入成本价', trigger: 'blur' }
+  ],
+  retailPrice: [
+    { required: true, message: '请输入零售价', trigger: 'blur' }
+  ]
 }
 
 // 获取商品列表
@@ -285,14 +360,33 @@ const fetchData = async () => {
   }
 }
 
-// 获取分类列表
+// 获取分类列表（使用扁平化列表）
 const fetchCategories = async () => {
   try {
-    const { data } = await getCategoryTree()
+    const { data } = await getAllCategories()
     categories.value = data
   } catch (error) {
     ElMessage.error('获取分类列表失败')
   }
+}
+
+// 获取分类名称
+const getCategoryName = (categoryId) => {
+  const category = categories.value.find(c => c.id === categoryId)
+  return category ? category.categoryName : '-'
+}
+
+// 格式化时间
+const formatTime = (time) => {
+  if (!time) return '-'
+  return new Date(time).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
 }
 
 // 搜索
@@ -340,7 +434,21 @@ const handleEdit = (row) => {
 
 // 查看
 const handleView = (row) => {
-  ElMessage.info('查看详情功能开发中...')
+  viewData.value = { ...row }
+  viewDialogVisible.value = true
+}
+
+// 从查看对话框跳转到编辑
+const handleEditFromView = () => {
+  viewDialogVisible.value = false
+  dialogTitle.value = '编辑商品'
+  Object.assign(form, viewData.value)
+  dialogVisible.value = true
+}
+
+// 对话框打开时刷新分类列表
+const handleDialogOpen = () => {
+  fetchCategories()
 }
 
 // 删除

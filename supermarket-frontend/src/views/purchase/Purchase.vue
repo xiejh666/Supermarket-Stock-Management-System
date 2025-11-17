@@ -29,13 +29,21 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="purchaseDate" label="采购日期" width="120" />
-        <el-table-column prop="createTime" label="创建时间" width="180" />
+        <el-table-column prop="createTime" label="采购时间" width="180" />
+        <el-table-column prop="inboundTime" label="入库时间" width="180" />
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleView(row)">详情</el-button>
             <el-button
-              v-if="row.status === 0"
+              v-if="row.status === 0 && isAdmin"
+              type="warning"
+              link
+              @click="handleAudit(row)"
+            >
+              审核
+            </el-button>
+            <el-button
+              v-if="row.status === 1"
               type="success"
               link
               @click="handleConfirm(row)"
@@ -59,11 +67,62 @@
       />
     </el-card>
 
+    <!-- 查看详情对话框 -->
+    <el-dialog
+      v-model="viewDialogVisible"
+      title="采购订单详情"
+      width="900px"
+    >
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="采购单号">
+          {{ viewData.orderNo }}
+        </el-descriptions-item>
+        <el-descriptions-item label="供应商">
+          {{ viewData.supplierName }}
+        </el-descriptions-item>
+        <el-descriptions-item label="采购时间">
+          {{ formatTime(viewData.createTime) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="总金额">
+          <span class="amount">¥{{ viewData.totalAmount }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="状态">
+          <el-tag :type="getStatusType(viewData.status)">
+            {{ getStatusText(viewData.status) }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="入库时间">
+          {{ formatTime(viewData.inboundTime) }}
+        </el-descriptions-item>
+      </el-descriptions>
+      
+      <el-divider content-position="left">采购明细</el-divider>
+      
+      <el-table :data="viewData.items" border>
+        <el-table-column prop="productName" label="商品名称" />
+        <el-table-column prop="quantity" label="采购数量" width="120" />
+        <el-table-column label="采购单价" width="120">
+          <template #default="{ row }">
+            ¥{{ row.unitPrice }}
+          </template>
+        </el-table-column>
+        <el-table-column label="小计" width="120">
+          <template #default="{ row }">
+            ¥{{ row.totalPrice }}
+          </template>
+        </el-table-column>
+      </el-table>
+      
+      <template #footer>
+        <el-button @click="viewDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 新增采购单对话框 -->
     <el-dialog
       v-model="dialogVisible"
       :title="dialogTitle"
-      width="900px"
+      width="1100px"
     >
       <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
         <el-row :gutter="20">
@@ -99,9 +158,9 @@
         </el-button>
         
         <el-table :data="form.items" border style="width: 100%">
-          <el-table-column label="商品" width="200">
+          <el-table-column label="商品" width="280">
             <template #default="{ row }">
-              <el-select v-model="row.productId" placeholder="选择商品" @change="handleProductChange(row)">
+              <el-select v-model="row.productId" placeholder="选择商品" style="width: 100%" @change="handleProductChange(row)">
                 <el-option
                   v-for="product in productList"
                   :key="product.id"
@@ -111,22 +170,22 @@
               </el-select>
             </template>
           </el-table-column>
-          <el-table-column label="采购数量" width="150">
+          <el-table-column label="采购数量" width="180">
             <template #default="{ row }">
-              <el-input-number v-model="row.quantity" :min="1" @change="calculateTotal" />
+              <el-input-number v-model="row.quantity" :min="1" style="width: 100%" @change="calculateTotal" />
             </template>
           </el-table-column>
-          <el-table-column label="采购单价" width="150">
+          <el-table-column label="采购单价" width="180">
             <template #default="{ row }">
-              <el-input-number v-model="row.purchasePrice" :min="0" :precision="2" @change="calculateTotal" />
+              <el-input-number v-model="row.purchasePrice" :min="0" :precision="2" style="width: 100%" @change="calculateTotal" />
             </template>
           </el-table-column>
-          <el-table-column label="小计" width="120">
+          <el-table-column label="小计" width="150">
             <template #default="{ row }">
-              ¥{{ (row.quantity * row.purchasePrice).toFixed(2) }}
+              ¥{{ ((row.quantity || 0) * (row.purchasePrice || 0)).toFixed(2) }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="80">
+          <el-table-column label="操作" width="100">
             <template #default="{ $index }">
               <el-button type="danger" link @click="handleRemoveItem($index)">删除</el-button>
             </template>
@@ -148,10 +207,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
 import purchaseApi, { createPurchaseOrder, confirmInbound } from '@/api/purchase'
 import supplierApi from '@/api/supplier'
 import productApi from '@/api/product'
+import { useUserStore } from '@/store/user'
 
 const purchaseList = ref([])
 const supplierList = ref([])
@@ -160,9 +219,18 @@ const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 
+const userStore = useUserStore()
 const dialogVisible = ref(false)
+const viewDialogVisible = ref(false)
 const dialogTitle = ref('新增采购单')
 const formRef = ref(null)
+const viewData = ref({})
+
+// 从用户信息中获取角色，判断是否为管理员
+const isAdmin = computed(() => {
+  return userStore.userInfo?.username === 'admin'
+})
+
 const form = ref({
   supplierId: null,
   purchaseDate: '',
@@ -180,18 +248,28 @@ const rules = {
 
 const totalAmount = computed(() => {
   return form.value.items.reduce((sum, item) => {
-    return sum + (item.quantity * item.purchasePrice)
+    return sum + ((item.quantity || 0) * (item.purchasePrice || 0))
   }, 0).toFixed(2)
 })
 
 const getStatusType = (status) => {
-  const types = { 0: 'warning', 1: 'success', 2: 'danger' }
-  return types[status] || 'info'
+  const typeMap = {
+    0: 'warning',
+    1: 'primary',
+    2: 'danger',
+    3: 'success'
+  }
+  return typeMap[status] || 'info'
 }
 
 const getStatusText = (status) => {
-  const texts = { 0: '待入库', 1: '已入库', 2: '已取消' }
-  return texts[status] || '未知'
+  const statusMap = {
+    0: '待审核',
+    1: '待入库',
+    2: '已拒绝',
+    3: '已入库'
+  }
+  return statusMap[status] || '未知'
 }
 
 const loadData = async () => {
@@ -277,8 +355,63 @@ const handleSubmit = async () => {
   }
 }
 
-const handleView = (row) => {
-  ElMessage.info('查看详情功能开发中...')
+const handleView = async (row) => {
+  try {
+    const { data } = await purchaseApi.getDetail(row.id)
+    viewData.value = data
+    viewDialogVisible.value = true
+  } catch (error) {
+    ElMessage.error('获取详情失败')
+  }
+}
+
+const handleAudit = async (row) => {
+  try {
+    const { value } = await ElMessageBox.prompt('请输入审核备注（可选）', '审核采购订单', {
+      confirmButtonText: '通过',
+      cancelButtonText: '拒绝',
+      distinguishCancelAndClose: true,
+      inputPlaceholder: '请输入审核备注'
+    })
+    
+    // 通过审核
+    await purchaseApi.audit(row.id, 1, value || '', 1) // auditorId 默认为 1
+    ElMessage.success('审核通过')
+    loadData()
+  } catch (error) {
+    if (error === 'cancel') {
+      // 拒绝审核
+      try {
+        const { value } = await ElMessageBox.prompt('请输入拒绝原因', '拒绝审核', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          inputPlaceholder: '请输入拒绝原因'
+        })
+        
+        await purchaseApi.audit(row.id, 2, value || '审核不通过', 1)
+        ElMessage.success('已拒绝')
+        loadData()
+      } catch (err) {
+        if (err !== 'cancel' && err !== 'close') {
+          ElMessage.error('操作失败')
+        }
+      }
+    } else if (error !== 'close') {
+      ElMessage.error('操作失败')
+    }
+  }
+}
+
+const formatTime = (time) => {
+  if (!time) return '-'
+  return new Date(time).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
 }
 
 const handleConfirm = async (row) => {

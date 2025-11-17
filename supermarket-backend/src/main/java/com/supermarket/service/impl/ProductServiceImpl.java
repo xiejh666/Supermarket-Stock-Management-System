@@ -3,8 +3,10 @@ package com.supermarket.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.supermarket.dto.ProductDTO;
+import com.supermarket.entity.Inventory;
 import com.supermarket.entity.Product;
 import com.supermarket.exception.BusinessException;
+import com.supermarket.mapper.InventoryMapper;
 import com.supermarket.mapper.ProductMapper;
 import com.supermarket.service.ProductService;
 import lombok.RequiredArgsConstructor;
@@ -20,17 +22,39 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> implements ProductService {
 
     private final ProductMapper productMapper;
+    private final InventoryMapper inventoryMapper;
 
     @Override
     public Page<Product> getProductList(Integer current, Integer size, String productName, 
                                         Long categoryId, Integer status) {
         Page<Product> page = new Page<>(current, size);
-        return lambdaQuery()
+        Page<Product> result = lambdaQuery()
                 .like(productName != null, Product::getProductName, productName)
                 .eq(categoryId != null, Product::getCategoryId, categoryId)
                 .eq(status != null, Product::getStatus, status)
                 .orderByDesc(Product::getCreateTime)
                 .page(page);
+        
+        // 将price映射到retailPrice，image映射到imageUrl，并查询库存信息
+        result.getRecords().forEach(product -> {
+            product.setRetailPrice(product.getPrice());
+            product.setImageUrl(product.getImage());
+            
+            // 查询库存信息
+            Inventory inventory = inventoryMapper.selectOne(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Inventory>()
+                    .eq(Inventory::getProductId, product.getId())
+            );
+            if (inventory != null) {
+                product.setStock(inventory.getQuantity());
+                product.setWarningStock(inventory.getWarningQuantity());
+            } else {
+                product.setStock(0);
+                product.setWarningStock(0);
+            }
+        });
+        
+        return result;
     }
 
     @Override
@@ -48,6 +72,14 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
 
         Product product = new Product();
         BeanUtils.copyProperties(dto, product);
+        
+        // 将retailPrice映射到price，imageUrl映射到image
+        if (dto.getRetailPrice() != null) {
+            product.setPrice(dto.getRetailPrice());
+        }
+        if (dto.getImageUrl() != null) {
+            product.setImage(dto.getImageUrl());
+        }
         
         productMapper.insert(product);
     }
@@ -76,6 +108,15 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         }
 
         BeanUtils.copyProperties(dto, product);
+        
+        // 将retailPrice映射到price，imageUrl映射到image
+        if (dto.getRetailPrice() != null) {
+            product.setPrice(dto.getRetailPrice());
+        }
+        if (dto.getImageUrl() != null) {
+            product.setImage(dto.getImageUrl());
+        }
+        
         productMapper.updateById(product);
     }
 

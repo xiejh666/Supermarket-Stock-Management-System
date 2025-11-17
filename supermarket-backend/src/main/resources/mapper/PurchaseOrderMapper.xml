@@ -15,6 +15,7 @@
         <result column="auditor_name" property="auditorName"/>
         <result column="audit_time" property="auditTime"/>
         <result column="audit_remark" property="auditRemark"/>
+        <result column="inbound_time" property="inboundTime"/>
         <result column="create_time" property="createTime"/>
     </resultMap>
 
@@ -32,6 +33,7 @@
             u2.real_name AS auditor_name,
             po.audit_time,
             po.audit_remark,
+            po.inbound_time,
             po.create_time
         FROM purchase_order po
         LEFT JOIN supplier s ON po.supplier_id = s.id
@@ -68,6 +70,7 @@
             u2.real_name AS auditor_name,
             po.audit_time,
             po.audit_remark,
+            po.inbound_time,
             po.create_time
         FROM purchase_order po
         LEFT JOIN supplier s ON po.supplier_id = s.id

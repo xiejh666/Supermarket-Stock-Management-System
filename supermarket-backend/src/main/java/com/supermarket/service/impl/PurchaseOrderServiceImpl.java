@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.supermarket.dto.PurchaseOrderDTO;
 import com.supermarket.dto.PurchaseOrderItemDTO;
-import com.supermarket.entity.Product;
 import com.supermarket.entity.PurchaseOrder;
 import com.supermarket.entity.PurchaseOrderItem;
 import com.supermarket.exception.BusinessException;
@@ -82,7 +81,12 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         // 计算订单总金额
         BigDecimal totalAmount = BigDecimal.ZERO;
         for (PurchaseOrderItemDTO item : dto.getItems()) {
-            BigDecimal itemTotal = item.getUnitPrice().multiply(new BigDecimal(item.getQuantity()));
+            // 优先使用purchasePrice，如果为空则使用unitPrice
+            BigDecimal price = item.getPurchasePrice() != null ? item.getPurchasePrice() : item.getUnitPrice();
+            if (price == null) {
+                price = BigDecimal.ZERO;
+            }
+            BigDecimal itemTotal = price.multiply(new BigDecimal(item.getQuantity()));
             totalAmount = totalAmount.add(itemTotal);
         }
         
@@ -93,6 +97,8 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         order.setTotalAmount(totalAmount);
         order.setStatus(0); // 待审核
         order.setApplicantId(applicantId);
+        // createTime会自动填充，作为采购时间
+        
         purchaseOrderMapper.insert(order);
         
         // 创建订单明细
@@ -101,8 +107,15 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
             item.setOrderId(order.getId());
             item.setProductId(itemDTO.getProductId());
             item.setQuantity(itemDTO.getQuantity());
-            item.setUnitPrice(itemDTO.getUnitPrice());
-            item.setTotalPrice(itemDTO.getUnitPrice().multiply(new BigDecimal(itemDTO.getQuantity())));
+            
+            // 优先使用purchasePrice，如果为空则使用unitPrice
+            BigDecimal price = itemDTO.getPurchasePrice() != null ? itemDTO.getPurchasePrice() : itemDTO.getUnitPrice();
+            if (price == null) {
+                price = BigDecimal.ZERO;
+            }
+            
+            item.setUnitPrice(price);
+            item.setTotalPrice(price.multiply(new BigDecimal(itemDTO.getQuantity())));
             purchaseOrderItemMapper.insert(item);
         }
     }
@@ -154,8 +167,9 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
                     order.getOrderNo(), "采购入库", operatorId);
         }
         
-        // 更新订单状态
+        // 更新订单状态和入库时间
         order.setStatus(3); // 已入库
+        order.setInboundTime(LocalDateTime.now()); // 设置入库时间
         purchaseOrderMapper.updateById(order);
     }
 
@@ -198,7 +212,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
                 vo.setStatusDesc("待审核");
                 break;
             case 1:
-                vo.setStatusDesc("已通过");
+                vo.setStatusDesc("待入库");
                 break;
             case 2:
                 vo.setStatusDesc("已拒绝");
