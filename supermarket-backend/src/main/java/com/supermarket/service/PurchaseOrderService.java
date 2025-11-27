@@ -40,7 +40,7 @@ public interface PurchaseOrderService extends IService<PurchaseOrder> {
     /**
      * 删除采购订单
      */
-    void deletePurchaseOrder(Long id);
+    void deletePurchaseOrder(Long id, Long operatorId);
 }
 
 

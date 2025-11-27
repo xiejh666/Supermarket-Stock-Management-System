@@ -22,7 +22,7 @@
         <el-table-column label="角色" width="120">
           <template #default="{ row }">
             <el-tag :type="row.roleCode === 'ADMIN' ? 'danger' : 'success'">
-              {{ row.roleCode === 'ADMIN' ? '管理员' : '普通用户' }}
+              {{ row.roleName || '未分配' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -32,6 +32,7 @@
               v-model="row.status"
               :active-value="1"
               :inactive-value="0"
+              :before-change="() => beforeStatusChange(row)"
               @change="handleStatusChange(row)"
             />
           </template>
@@ -77,10 +78,14 @@
         <el-form-item label="手机号" prop="phone">
           <el-input v-model="form.phone" placeholder="请输入手机号" />
         </el-form-item>
-        <el-form-item label="角色" prop="roleCode">
-          <el-select v-model="form.roleCode" placeholder="请选择角色" style="width: 100%">
-            <el-option label="管理员" value="ADMIN" />
-            <el-option label="普通用户" value="USER" />
+        <el-form-item label="角色" prop="roleId">
+          <el-select v-model="form.roleId" placeholder="请选择角色" style="width: 100%">
+            <el-option
+              v-for="role in roleList"
+              :key="role.id"
+              :label="role.roleName"
+              :value="role.id"
+            />
           </el-select>
         </el-form-item>
       </el-form>
@@ -96,9 +101,13 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/store/user'
 import userApi from '@/api/user'
+import { getRoleList } from '@/api/role'
 
 const userList = ref([])
+const roleList = ref([])
 const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
@@ -112,12 +121,15 @@ const form = ref({
   password: '',
   realName: '',
   phone: '',
-  roleCode: 'USER'
+  roleId: null
 })
 
 const rules = {
   username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' }
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { pattern: /^[a-zA-Z0-9_]+$/, message: '用户名只能包含英文字母、数字和下划线', trigger: 'blur' },
+    { min: 3, message: '用户名长度不能少于3位', trigger: 'blur' },
+    { max: 20, message: '用户名长度不能超过20位', trigger: 'blur' }
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
@@ -128,6 +140,9 @@ const rules = {
   ],
   phone: [
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+  ],
+  roleId: [
+    { required: true, message: '请选择角色', trigger: 'change' }
   ]
 }
 
@@ -152,7 +167,7 @@ const handleAdd = () => {
     password: '',
     realName: '',
     phone: '',
-    roleCode: 'USER'
+    roleId: null
   }
   dialogVisible.value = true
 }
@@ -180,12 +195,61 @@ const handleSubmit = async () => {
   }
 }
 
+const router = useRouter()
+const userStore = useUserStore()
+
+// 状态改变前的检查
+const beforeStatusChange = async (row) => {
+  const currentUser = userStore.userInfo
+  const newStatus = row.status === 1 ? 0 : 1 // 即将变成的状态
+  const currentUserId = currentUser?.userId || currentUser?.id // 兼容userId和id
+  
+  // 如果是禁用操作且是当前登录用户
+  if (newStatus === 0 && currentUser && currentUserId === row.id) {
+    try {
+      await ElMessageBox.confirm(
+        '您正在禁用当前登录的账号，操作后将强制退出登录，是否继续？',
+        '警告',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      )
+      return true // 允许状态改变
+    } catch (error) {
+      return false // 阻止状态改变
+    }
+  }
+  
+  return true // 允许状态改变
+}
+
+// 状态改变后的处理
 const handleStatusChange = async (row) => {
+  const currentUser = userStore.userInfo
+  const currentUserId = currentUser?.userId || currentUser?.id // 兼容userId和id
+  
   try {
+    // 调用API更新状态
     await userApi.updateStatus(row.id, row.status)
-    ElMessage.success('状态更新成功')
+    
+    // 如果是禁用当前登录用户
+    if (row.status === 0 && currentUser && currentUserId === row.id) {
+      ElMessage.success('账号已禁用，即将退出登录...')
+      
+      // 延迟1秒后强制退出登录
+      setTimeout(async () => {
+        await userStore.logout()
+        router.push('/login')
+      }, 1000)
+    } else {
+      ElMessage.success('状态更新成功')
+    }
   } catch (error) {
+    console.error('状态更新失败:', error)
     ElMessage.error('状态更新失败')
+    // 恢复状态
     row.status = row.status === 1 ? 0 : 1
   }
 }
@@ -215,8 +279,18 @@ const handleDelete = async (row) => {
   }
 }
 
+const loadRoles = async () => {
+  try {
+    const { data } = await getRoleList()
+    roleList.value = data
+  } catch (error) {
+    console.error('加载角色列表失败', error)
+  }
+}
+
 onMounted(() => {
   loadData()
+  loadRoles()
 })
 </script>
 

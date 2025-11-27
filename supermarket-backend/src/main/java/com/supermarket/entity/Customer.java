@@ -3,6 +3,7 @@ package com.supermarket.entity;
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
+import javax.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
 
 /**
@@ -15,6 +16,7 @@ public class Customer {
     @TableId(type = IdType.AUTO)
     private Long id;
 
+    @NotBlank(message = "客户名称不能为空")
     private String customerName;
 
     private String phone;

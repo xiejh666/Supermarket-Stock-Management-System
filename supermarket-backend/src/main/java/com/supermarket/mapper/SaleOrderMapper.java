@@ -1,7 +1,9 @@
 package com.supermarket.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.supermarket.entity.SaleOrder;
+import com.supermarket.vo.SaleOrderVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -14,6 +16,16 @@ import java.util.Map;
  */
 @Mapper
 public interface SaleOrderMapper extends BaseMapper<SaleOrder> {
+
+    /**
+     * 分页查询销售订单列表
+     */
+    Page<SaleOrderVO> selectSaleOrderPage(Page<SaleOrderVO> page,
+                                         @Param("orderNo") String orderNo,
+                                         @Param("customerName") String customerName,
+                                         @Param("status") Integer status,
+                                         @Param("startDate") String startDate,
+                                         @Param("endDate") String endDate);
     
     /**
      * 获取销售趋势数据 - 按天统计

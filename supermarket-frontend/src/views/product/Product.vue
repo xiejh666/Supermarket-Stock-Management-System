@@ -9,7 +9,7 @@
           </h2>
           <p class="subtitle">管理商品信息</p>
         </div>
-        <el-button type="primary" :icon="Plus" @click="handleAdd">新增商品</el-button>
+        <el-button v-if="canCreate('product')" type="primary" :icon="Plus" @click="handleAdd">新增商品</el-button>
       </div>
     </el-card>
 
@@ -97,8 +97,22 @@
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" :icon="View" @click="handleView(row)">查看</el-button>
-            <el-button link type="primary" :icon="Edit" @click="handleEdit(row)">编辑</el-button>
-            <el-button link type="danger" :icon="Delete" @click="handleDelete(row)">删除</el-button>
+            <el-button 
+              v-if="canUpdate('product')" 
+              link 
+              type="primary" 
+              :icon="Edit" 
+              @click="() => checkPermission('update', 'product', () => handleEdit(row))">
+              编辑
+            </el-button>
+            <el-button 
+              v-if="canDelete('product')" 
+              link 
+              type="danger" 
+              :icon="Delete" 
+              @click="() => checkPermission('delete', 'product', () => handleDelete(row))">
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -178,7 +192,7 @@
       </el-descriptions>
       <template #footer>
         <el-button @click="viewDialogVisible = false">关闭</el-button>
-        <el-button type="primary" @click="handleEditFromView">编辑</el-button>
+        <el-button v-if="canUpdate('product')" type="primary" @click="handleEditFromView">编辑</el-button>
       </template>
     </el-dialog>
 
@@ -264,7 +278,7 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitLoading">确定</el-button>
+        <el-button v-if="canCreate('product') || canUpdate('product')" type="primary" @click="handleSubmit" :loading="submitLoading">确定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -290,6 +304,7 @@ import {
   updateProductStatus
 } from '@/api/product'
 import { getAllCategories } from '@/api/category'
+import { canCreate, canUpdate, canDelete, checkPermission } from '@/utils/permission'
 
 const loading = ref(false)
 const submitLoading = ref(false)

@@ -6,7 +6,7 @@
           <h2>🏢 供应商管理</h2>
           <p class="subtitle">管理供应商信息</p>
         </div>
-        <el-button type="primary" @click="handleAdd">
+        <el-button v-if="canCreate('supplier')" type="primary" @click="handleAdd">
           <el-icon><Plus /></el-icon>
           新增供应商
         </el-button>
@@ -23,8 +23,20 @@
         <el-table-column prop="createTime" label="创建时间" width="180" />
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link @click="handleEdit(row)">编辑</el-button>
-            <el-button type="danger" link @click="handleDelete(row)">删除</el-button>
+            <el-button 
+              v-if="canUpdate('supplier')" 
+              type="primary" 
+              link 
+              @click="() => checkPermission('update', 'supplier', () => handleEdit(row))">
+              编辑
+            </el-button>
+            <el-button 
+              v-if="canDelete('supplier')" 
+              type="danger" 
+              link 
+              @click="() => checkPermission('delete', 'supplier', () => handleDelete(row))">
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -82,7 +94,10 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import supplierApi from '@/api/supplier'
+import { canCreate, canUpdate, canDelete, checkPermission } from '@/utils/permission'
+import { useUserStore } from '@/store/user'
 
+const userStore = useUserStore()
 const supplierList = ref([])
 const pageNum = ref(1)
 const pageSize = ref(10)
@@ -147,11 +162,12 @@ const handleEdit = (row) => {
 const handleSubmit = async () => {
   await formRef.value.validate()
   try {
+    const currentUserId = userStore.userInfo?.userId || userStore.userInfo?.id
     if (form.value.id) {
-      await supplierApi.update(form.value)
+      await supplierApi.update(form.value, currentUserId)
       ElMessage.success('更新成功')
     } else {
-      await supplierApi.create(form.value)
+      await supplierApi.create(form.value, currentUserId)
       ElMessage.success('创建成功')
     }
     dialogVisible.value = false
@@ -166,7 +182,8 @@ const handleDelete = async (row) => {
     type: 'warning'
   })
   try {
-    await supplierApi.delete(row.id)
+    const currentUserId = userStore.userInfo?.userId || userStore.userInfo?.id
+    await supplierApi.delete(row.id, currentUserId)
     ElMessage.success('删除成功')
     loadData()
   } catch (error) {

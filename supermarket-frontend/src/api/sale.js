@@ -46,10 +46,11 @@ export function paySaleOrder(id) {
 /**
  * 取消订单
  */
-export function cancelSaleOrder(id) {
+export function cancelSaleOrder(id, reason) {
   return request({
     url: `/sale/orders/${id}/cancel`,
-    method: 'put'
+    method: 'put',
+    params: { reason }
   })
 }
 

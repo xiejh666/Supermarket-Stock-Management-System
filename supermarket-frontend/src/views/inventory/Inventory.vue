@@ -83,10 +83,11 @@
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="loadData">
+          <el-button type="primary" @click="handleSearch">
             <el-icon><Search /></el-icon>
             搜索
           </el-button>
+          <el-button @click="handleReset">重置</el-button>
         </el-form-item>
       </el-form>
 
@@ -148,8 +149,8 @@
         </el-form-item>
         <el-form-item label="调整类型" prop="type">
           <el-radio-group v-model="adjustForm.type">
-            <el-radio :label="1">入库</el-radio>
-            <el-radio :label="2">出库</el-radio>
+            <el-radio v-if="canInbound('inventory')" :label="1">入库</el-radio>
+            <el-radio v-if="canOutbound('inventory')" :label="2">出库</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="调整数量" prop="quantity">
@@ -169,15 +170,111 @@
         <el-button type="primary" @click="handleAdjustSubmit">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- 历史记录对话框 -->
+    <el-dialog
+      v-model="historyDialogVisible"
+      :title="`${currentProductName} - 库存变动历史`"
+      width="1000px"
+    >
+      <el-table 
+        :data="historyList" 
+        stripe 
+        style="width: 100%"
+        highlight-current-row
+        @current-change="handleHistoryRowClick"
+        :row-class-name="getHistoryRowClass"
+      >
+        <el-table-column prop="changeTypeName" label="变动类型" width="110">
+          <template #default="{ row }">
+            <el-tag :type="getChangeTypeTag(row.changeType)" size="small">
+              {{ row.changeTypeName }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="changeQuantity" label="变动数量" width="100">
+          <template #default="{ row }">
+            <span :style="{ color: row.changeQuantity > 0 ? '#67c23a' : '#f56c6c', fontWeight: 'bold' }">
+              {{ row.changeQuantity > 0 ? '+' : '' }}{{ row.changeQuantity }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="beforeQuantity" label="变动前" width="90" />
+        <el-table-column prop="afterQuantity" label="变动后" width="90" />
+        <el-table-column prop="remark" label="备注" show-overflow-tooltip min-width="150" />
+        <el-table-column prop="createTime" label="操作时间" width="160" />
+        <el-table-column label="操作" width="80" fixed="right">
+          <template #default="{ row }">
+            <el-button type="primary" link size="small" @click="handleHistoryDetail(row)">
+              详情
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button @click="historyDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 历史记录详情对话框 -->
+    <el-dialog
+      v-model="historyDetailVisible"
+      title="库存变动详情"
+      width="600px"
+    >
+      <el-descriptions v-if="historyDetailData" :column="2" border>
+        <el-descriptions-item label="商品名称" :span="2">
+          <span style="font-weight: 600; color: #303133;">{{ historyDetailData.productName }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="变动类型">
+          <el-tag :type="getChangeTypeTag(historyDetailData.changeType)">
+            {{ historyDetailData.changeTypeName }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="变动数量">
+          <span :style="{ 
+            color: historyDetailData.changeQuantity > 0 ? '#67c23a' : '#f56c6c',
+            fontWeight: 'bold',
+            fontSize: '16px'
+          }">
+            {{ historyDetailData.changeQuantity > 0 ? '+' : '' }}{{ historyDetailData.changeQuantity }}
+          </span>
+        </el-descriptions-item>
+        <el-descriptions-item label="变动前库存">
+          <span style="font-size: 15px;">{{ historyDetailData.beforeQuantity }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="变动后库存">
+          <span style="font-size: 15px; font-weight: 600; color: #409eff;">{{ historyDetailData.afterQuantity }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="订单号" :span="2">
+          {{ historyDetailData.orderNo || '无' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="备注" :span="2">
+          <div style="white-space: pre-wrap; word-break: break-all;">
+            {{ historyDetailData.remark || '无' }}
+          </div>
+        </el-descriptions-item>
+        <el-descriptions-item label="操作时间" :span="2">
+          <span style="color: #909399;">
+            <el-icon><Clock /></el-icon>
+            {{ historyDetailData.createTime }}
+          </span>
+        </el-descriptions-item>
+      </el-descriptions>
+      <template #footer>
+        <el-button type="primary" @click="historyDetailVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Refresh, Box, Warning, Goods, Search } from '@element-plus/icons-vue'
+import { Refresh, Box, Warning, Goods, Search, Clock } from '@element-plus/icons-vue'
 import inventoryApi from '@/api/inventory'
 import categoryApi from '@/api/category'
+import { canInbound, canOutbound } from '@/utils/permission'
 
 const inventoryList = ref([])
 const categoryList = ref([])
@@ -224,8 +321,8 @@ const totalStock = computed(() => {
 const loadData = async () => {
   try {
     const { data } = await inventoryApi.getList({
-      pageNum: pageNum.value,
-      pageSize: pageSize.value,
+      current: pageNum.value,
+      size: pageSize.value,
       ...searchForm.value
     })
     inventoryList.value = data.records
@@ -233,6 +330,20 @@ const loadData = async () => {
   } catch (error) {
     ElMessage.error('加载数据失败')
   }
+}
+
+const handleSearch = () => {
+  pageNum.value = 1
+  loadData()
+}
+
+const handleReset = () => {
+  searchForm.value = {
+    productName: '',
+    categoryId: null
+  }
+  pageNum.value = 1
+  loadData()
 }
 
 const loadCategories = async () => {
@@ -264,22 +375,71 @@ const handleAdjust = (row) => {
 const handleAdjustSubmit = async () => {
   await adjustFormRef.value.validate()
   try {
-    await inventoryApi.adjust({
+    const params = {
       productId: adjustForm.value.productId,
-      type: adjustForm.value.type,
       quantity: adjustForm.value.quantity,
-      reason: adjustForm.value.reason
-    })
-    ElMessage.success('调整成功')
+      remark: adjustForm.value.reason,
+      operatorId: 1 // 默认操作人 ID
+    }
+    
+    if (adjustForm.value.type === 1) {
+      // 入库
+      await inventoryApi.inbound(params)
+      ElMessage.success('入库成功')
+    } else if (adjustForm.value.type === 2) {
+      // 出库
+      await inventoryApi.outbound(params)
+      ElMessage.success('出库成功')
+    }
+    
     adjustDialogVisible.value = false
     loadData()
   } catch (error) {
-    ElMessage.error('调整失败')
+    ElMessage.error('操作失败：' + (error.message || '请稍后重试'))
   }
 }
 
-const handleHistory = (row) => {
-  ElMessage.info('查看历史记录功能开发中...')
+const historyDialogVisible = ref(false)
+const historyList = ref([])
+const currentProductName = ref('')
+const selectedHistoryRow = ref(null)
+const historyDetailVisible = ref(false)
+const historyDetailData = ref(null)
+
+const handleHistory = async (row) => {
+  try {
+    currentProductName.value = row.productName
+    const { data } = await inventoryApi.getLogs(row.productId)
+    historyList.value = data
+    historyDialogVisible.value = true
+  } catch (error) {
+    ElMessage.error('获取历史记录失败')
+  }
+}
+
+const getChangeTypeTag = (type) => {
+  const types = {
+    1: 'success',
+    2: 'warning',
+    3: 'info'
+  }
+  return types[type] || 'info'
+}
+
+const handleHistoryRowClick = (row) => {
+  selectedHistoryRow.value = row
+}
+
+const getHistoryRowClass = ({ row }) => {
+  if (selectedHistoryRow.value && selectedHistoryRow.value.id === row.id) {
+    return 'selected-history-row'
+  }
+  return ''
+}
+
+const handleHistoryDetail = (row) => {
+  historyDetailData.value = row
+  historyDetailVisible.value = true
 }
 
 onMounted(() => {
@@ -367,6 +527,24 @@ onMounted(() => {
     color: #e6a23c;
     font-weight: bold;
   }
+}
+
+// 历史记录选中行样式
+:deep(.selected-history-row) {
+  background-color: #ecf5ff !important;
+  
+  td {
+    background-color: #ecf5ff !important;
+  }
+  
+  &:hover td {
+    background-color: #d9ecff !important;
+  }
+}
+
+// 历史记录表格行悬停效果增强
+:deep(.el-table__body tr:hover) {
+  cursor: pointer;
 }
 </style>
 

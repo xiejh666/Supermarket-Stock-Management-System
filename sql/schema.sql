@@ -188,6 +188,7 @@ CREATE TABLE `sale_order` (
   `customer_id` BIGINT DEFAULT NULL COMMENT '客户ID',
   `total_amount` DECIMAL(10,2) DEFAULT 0.00 COMMENT '订单总金额',
   `status` TINYINT DEFAULT 0 COMMENT '订单状态：0-待支付，1-已支付，2-已取消',
+  `cancel_reason` VARCHAR(255) DEFAULT NULL COMMENT '取消原因',
   `cashier_id` BIGINT NOT NULL COMMENT '收银员ID',
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',

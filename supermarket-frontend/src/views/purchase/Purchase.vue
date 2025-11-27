@@ -6,7 +6,7 @@
           <h2>📦 采购管理</h2>
           <p class="subtitle">管理采购订单信息</p>
         </div>
-        <el-button type="primary" @click="handleAdd">
+        <el-button v-if="canCreate('purchase')" type="primary" @click="handleAdd">
           <el-icon><Plus /></el-icon>
           新增采购单
         </el-button>
@@ -50,7 +50,13 @@
             >
               确认入库
             </el-button>
-            <el-button type="danger" link @click="handleDelete(row)">删除</el-button>
+            <el-button 
+              v-if="canDelete('purchase')" 
+              type="danger" 
+              link 
+              @click="() => checkPermission('delete', 'purchase', () => handleDelete(row))">
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -211,6 +217,7 @@ import purchaseApi, { createPurchaseOrder, confirmInbound } from '@/api/purchase
 import supplierApi from '@/api/supplier'
 import productApi from '@/api/product'
 import { useUserStore } from '@/store/user'
+import { canCreate, canDelete, canAudit, checkPermission } from '@/utils/permission'
 
 const purchaseList = ref([])
 const supplierList = ref([])
@@ -345,8 +352,9 @@ const handleSubmit = async () => {
   
   await formRef.value.validate()
   try {
-    // 使用具名导出的函数
-    await createPurchaseOrder(form.value, 1) // applicantId 默认为 1
+    // 使用具名导出的函数，使用当前登录用户的ID作为申请人ID
+    const currentUserId = userStore.userInfo?.userId || userStore.userInfo?.id
+    await createPurchaseOrder(form.value, currentUserId)
     ElMessage.success('创建成功')
     dialogVisible.value = false
     loadData()
@@ -432,7 +440,8 @@ const handleDelete = async (row) => {
     type: 'warning'
   })
   try {
-    await purchaseApi.delete(row.id)
+    const currentUserId = userStore.userInfo?.userId || userStore.userInfo?.id
+    await purchaseApi.delete(row.id, currentUserId)
     ElMessage.success('删除成功')
     loadData()
   } catch (error) {

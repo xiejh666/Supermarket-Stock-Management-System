@@ -39,6 +39,11 @@
             <template #title>供应商管理</template>
           </el-menu-item>
           
+          <el-menu-item index="/customer">
+            <el-icon><User /></el-icon>
+            <template #title>客户管理</template>
+          </el-menu-item>
+          
           <el-menu-item index="/purchase">
             <el-icon><ShoppingCart /></el-icon>
             <template #title>采购管理</template>
@@ -148,8 +153,8 @@
                 v-for="(item, index) in filteredNotifications"
                 :key="item.id"
                 class="notification-item"
-                :class="{ 'unread': !item.isRead }"
-                @click="markAsRead(index)"
+                :class="{ 'unread': item.isRead === 0 }"
+                @click="markAsReadHandler(item)"
               >
                 <div class="notification-icon" :class="item.type">
                   <el-icon>
@@ -161,7 +166,7 @@
                   <div class="notification-desc">{{ item.content }}</div>
                   <div class="notification-time">{{ formatTime(item.createTime) }}</div>
                 </div>
-                <el-icon v-if="!item.isRead" class="unread-dot" color="#409eff">
+                <el-icon v-if="item.isRead === 0" class="unread-dot" color="#409eff">
                   <SuccessFilled />
                 </el-icon>
               </div>
@@ -174,7 +179,7 @@
                 v-for="(item, index) in unreadNotifications"
                 :key="item.id"
                 class="notification-item unread"
-                @click="markAsRead(notifications.indexOf(item))"
+                @click="markAsReadHandler(item)"
               >
                 <div class="notification-icon" :class="item.type">
                   <el-icon>
@@ -197,7 +202,7 @@
         
         <!-- 底部操作 -->
         <div class="notification-footer">
-          <el-button type="primary" text @click="markAllAsRead">全部已读</el-button>
+          <el-button type="primary" text @click="markAllAsReadHandler">全部已读</el-button>
           <el-button type="danger" text @click="clearAll">清空消息</el-button>
         </div>
       </div>
@@ -229,12 +234,12 @@ import {
   CircleCheck
 } from '@element-plus/icons-vue'
 import { 
-  getMessageList, 
+  getNotifications, 
   getUnreadCount, 
-  markMessageAsRead, 
-  markAllMessagesAsRead, 
-  clearAllMessages 
-} from '@/api/message'
+  markAsRead, 
+  markAllAsRead, 
+  getRecentActivities 
+} from '@/api/notification'
 
 const router = useRouter()
 const route = useRoute()
@@ -252,7 +257,7 @@ const userInfo = computed(() => userStore.userInfo || {})
 const activeMenu = computed(() => route.path)
 const unreadCount = computed(() => unreadCountValue.value)
 const filteredNotifications = computed(() => notifications.value)
-const unreadNotifications = computed(() => notifications.value.filter(n => !n.isRead))
+const unreadNotifications = computed(() => notifications.value.filter(n => n.isRead === 0))
 
 const currentRoute = computed(() => {
   const routeMap = {
@@ -260,6 +265,7 @@ const currentRoute = computed(() => {
     '/category': '分类管理',
     '/product': '商品管理',
     '/supplier': '供应商管理',
+    '/customer': '客户管理',
     '/purchase': '采购管理',
     '/sale': '销售管理',
     '/inventory': '库存管理',
@@ -309,10 +315,18 @@ const formatTime = (time) => {
 // 获取通知图标
 const getNotificationIcon = (type) => {
   const iconMap = {
-    success: CircleCheck,
-    warning: Warning,
-    info: InfoFilled,
-    error: Warning
+    PURCHASE_AUDIT: Warning,        // 采购审核 - 警告图标
+    PURCHASE_APPROVED: CircleCheck, // 采购审核通过 - 成功图标
+    PURCHASE_REJECTED: Warning,     // 采购审核拒绝 - 警告图标
+    PURCHASE_OPERATION: InfoFilled, // 采购操作 - 信息图标
+    SUPPLIER_OPERATION: InfoFilled, // 供应商操作 - 信息图标
+    CUSTOMER_OPERATION: InfoFilled, // 客户操作 - 信息图标
+    SALE_OPERATION: InfoFilled,     // 销售操作 - 信息图标
+    PRODUCT_OPERATION: InfoFilled,  // 商品操作 - 信息图标
+    CATEGORY_OPERATION: InfoFilled, // 分类操作 - 信息图标
+    INVENTORY_OPERATION: InfoFilled, // 库存操作 - 信息图标
+    SALE_PAYMENT: CircleCheck,      // 销售支付 - 成功图标
+    SYSTEM: InfoFilled             // 系统通知 - 信息图标
   }
   return iconMap[type] || InfoFilled
 }
@@ -320,9 +334,18 @@ const getNotificationIcon = (type) => {
 // 获取消息列表
 const fetchMessages = async () => {
   try {
-    const res = await getMessageList(false)
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    if (!userId) {
+      console.warn('用户ID不存在，无法获取通知')
+      return
+    }
+    const res = await getNotifications({
+      userId,
+      current: 1,
+      size: 50
+    })
     if (res.code === 200) {
-      notifications.value = res.data || []
+      notifications.value = res.data.records || []
     }
   } catch (error) {
     console.error('获取消息列表失败:', error)
@@ -332,7 +355,12 @@ const fetchMessages = async () => {
 // 获取未读消息数量
 const fetchUnreadCount = async () => {
   try {
-    const res = await getUnreadCount()
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    if (!userId) {
+      console.warn('用户ID不存在，无法获取未读数量')
+      return
+    }
+    const res = await getUnreadCount(userId)
     if (res.code === 200) {
       unreadCountValue.value = res.data || 0
     }
@@ -342,14 +370,13 @@ const fetchUnreadCount = async () => {
 }
 
 // 标记消息为已读（并处理跳转）
-const markAsRead = async (index) => {
-  const message = notifications.value[index]
-  
+const markAsReadHandler = async (notification) => {
   // 如果消息未读，标记为已读
-  if (!message.isRead) {
+  if (notification.isRead === 0) {
     try {
-      await markMessageAsRead(message.id)
-      message.isRead = true
+      const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+      await markAsRead(notification.id, userId)
+      notification.isRead = 1
       unreadCountValue.value = Math.max(0, unreadCountValue.value - 1)
     } catch (error) {
       console.error('标记消息为已读失败:', error)
@@ -358,32 +385,24 @@ const markAsRead = async (index) => {
     }
   }
   
-  // 根据消息类型跳转到对应页面
-  if (message.linkType) {
+  // 根据业务类型跳转到对应页面
+  if (notification.businessType === 'PURCHASE_ORDER') {
     showNotifications.value = false // 关闭抽屉
-    
-    const routeMap = {
-      'purchase': '/purchase',
-      'sale': '/sale',
-      'inventory': '/inventory',
-      'product': '/product',
-      'supplier': '/supplier',
-      'user': '/user'
-    }
-    
-    const targetRoute = routeMap[message.linkType]
-    if (targetRoute) {
-      router.push(targetRoute)
-      ElMessage.success('已跳转到' + message.linkType + '管理页面')
-    }
+    router.push('/purchase')
+    ElMessage.success('已跳转到采购管理页面')
+  } else if (notification.businessType === 'SALE_ORDER') {
+    showNotifications.value = false // 关闭抽屉
+    router.push('/sale')
+    ElMessage.success('已跳转到销售管理页面')
   }
 }
 
 // 全部标记为已读
-const markAllAsRead = async () => {
+const markAllAsReadHandler = async () => {
   try {
-    await markAllMessagesAsRead()
-    notifications.value.forEach(n => n.isRead = true)
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    await markAllAsRead(userId)
+    notifications.value.forEach(n => n.isRead = 1)
     unreadCountValue.value = 0
     ElMessage.success('已全部标记为已读')
   } catch (error) {

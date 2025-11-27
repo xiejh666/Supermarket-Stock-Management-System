@@ -2,6 +2,35 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.supermarket.mapper.SaleOrderMapper">
 
+    <!-- 分页查询销售订单列表 -->
+    <select id="selectSaleOrderPage" resultType="com.supermarket.vo.SaleOrderVO">
+        SELECT 
+            so.*,
+            c.customer_name,
+            u.real_name as cashier_name
+        FROM sale_order so
+        LEFT JOIN customer c ON so.customer_id = c.id
+        LEFT JOIN sys_user u ON so.cashier_id = u.id
+        <where>
+            <if test="orderNo != null and orderNo != ''">
+                AND so.order_no LIKE CONCAT('%', #{orderNo}, '%')
+            </if>
+            <if test="customerName != null and customerName != ''">
+                AND c.customer_name LIKE CONCAT('%', #{customerName}, '%')
+            </if>
+            <if test="status != null">
+                AND so.status = #{status}
+            </if>
+            <if test="startDate != null and startDate != ''">
+                AND DATE(so.create_time) &gt;= #{startDate}
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND DATE(so.create_time) &lt;= #{endDate}
+            </if>
+        </where>
+        ORDER BY so.create_time DESC
+    </select>
+
     <!-- 获取销售趋势数据 - 按天统计 -->
     <select id="getSalesTrendByDay" resultType="map">
         SELECT 

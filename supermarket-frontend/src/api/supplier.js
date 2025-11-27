@@ -24,32 +24,35 @@ export function getEnabledSuppliers() {
 /**
  * 创建供应商
  */
-export function createSupplier(data) {
+export function createSupplier(data, operatorId) {
   return request({
     url: '/suppliers',
     method: 'post',
-    data
+    data,
+    params: { operatorId }
   })
 }
 
 /**
  * 更新供应商
  */
-export function updateSupplier(data) {
+export function updateSupplier(data, operatorId) {
   return request({
     url: '/suppliers',
     method: 'put',
-    data
+    data,
+    params: { operatorId }
   })
 }
 
 /**
  * 删除供应商
  */
-export function deleteSupplier(id) {
+export function deleteSupplier(id, operatorId) {
   return request({
     url: `/suppliers/${id}`,
-    method: 'delete'
+    method: 'delete',
+    params: { operatorId }
   })
 }
 

@@ -12,29 +12,53 @@ export function getInventoryList(params) {
 }
 
 /**
- * 盘点调整
+ * 入库
  */
-export function adjustInventory(data) {
+export function inbound(params) {
   return request({
-    url: '/inventory/adjust',
+    url: '/inventory/inbound',
     method: 'post',
-    data
+    params
   })
 }
 
 /**
- * 获取库存统计
+ * 出库
  */
-export function getInventoryStats() {
+export function outbound(params) {
   return request({
-    url: '/inventory/stats',
+    url: '/inventory/outbound',
+    method: 'post',
+    params
+  })
+}
+
+/**
+ * 盘点调整
+ */
+export function adjustInventory(params) {
+  return request({
+    url: '/inventory/adjust',
+    method: 'put',
+    params
+  })
+}
+
+/**
+ * 获取库存变动历史
+ */
+export function getInventoryLogs(productId) {
+  return request({
+    url: `/inventory/logs/${productId}`,
     method: 'get'
   })
 }
 
 export default {
   getList: getInventoryList,
+  inbound: inbound,
+  outbound: outbound,
   adjust: adjustInventory,
-  getStats: getInventoryStats
+  getLogs: getInventoryLogs
 }
 

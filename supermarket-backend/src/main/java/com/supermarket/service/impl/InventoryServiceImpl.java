@@ -13,6 +13,7 @@ import com.supermarket.mapper.InventoryLogMapper;
 import com.supermarket.mapper.InventoryMapper;
 import com.supermarket.mapper.ProductMapper;
 import com.supermarket.service.InventoryService;
+import com.supermarket.vo.InventoryLogVO;
 import com.supermarket.vo.InventoryVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,7 +37,7 @@ public class InventoryServiceImpl extends ServiceImpl<InventoryMapper, Inventory
     private final CategoryMapper categoryMapper;
 
     @Override
-    public Page<InventoryVO> getInventoryList(Integer current, Integer size, String productName, Boolean isWarning) {
+    public Page<InventoryVO> getInventoryList(Integer current, Integer size, String productName, Long categoryId, Boolean isWarning) {
         Page<Inventory> page = new Page<>(current, size);
         
         LambdaQueryWrapper<Inventory> wrapper = new LambdaQueryWrapper<>();
@@ -81,12 +82,23 @@ public class InventoryServiceImpl extends ServiceImpl<InventoryMapper, Inventory
                     vo.setProductCode(product.getProductCode());
                     vo.setCategoryName(categoryMap.get(product.getCategoryId()));
                     vo.setQuantity(inventory.getQuantity());
+                    vo.setStock(inventory.getQuantity()); // 前端兼容字段
                     vo.setWarningQuantity(inventory.getWarningQuantity());
+                    vo.setMinStock(inventory.getWarningQuantity()); // 前端兼容字段
                     vo.setIsWarning(inventory.getQuantity() <= inventory.getWarningQuantity());
+                    vo.setUpdateTime(inventory.getUpdateTime());
                     return vo;
                 })
                 .filter(vo -> vo != null)
                 .filter(vo -> productName == null || vo.getProductName().contains(productName))
+                .filter(vo -> {
+                    // 分类过滤
+                    if (categoryId == null) {
+                        return true;
+                    }
+                    Product product = productMap.get(vo.getProductId());
+                    return product != null && categoryId.equals(product.getCategoryId());
+                })
                 .filter(vo -> isWarning == null || vo.getIsWarning().equals(isWarning))
                 .collect(Collectors.toList());
         
@@ -226,6 +238,46 @@ public class InventoryServiceImpl extends ServiceImpl<InventoryMapper, Inventory
         inventory.setQuantity(0);
         inventory.setWarningQuantity(warningQuantity != null ? warningQuantity : 10);
         inventoryMapper.insert(inventory);
+    }
+
+    @Override
+    public List<InventoryLogVO> getInventoryLogs(Long productId) {
+        // 查询库存变动日志
+        LambdaQueryWrapper<InventoryLog> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(InventoryLog::getProductId, productId)
+               .orderByDesc(InventoryLog::getCreateTime);
+        List<InventoryLog> logs = inventoryLogMapper.selectList(wrapper);
+        
+        // 查询商品信息
+        Product product = productMapper.selectById(productId);
+        String productName = product != null ? product.getProductName() : "";
+        
+        // 转换为VO
+        return logs.stream().map(log -> {
+            InventoryLogVO vo = new InventoryLogVO();
+            vo.setId(log.getId());
+            vo.setProductId(log.getProductId());
+            vo.setProductName(productName);
+            vo.setChangeType(log.getChangeType());
+            vo.setChangeTypeName(getChangeTypeName(log.getChangeType()));
+            vo.setChangeQuantity(log.getChangeQuantity());
+            vo.setBeforeQuantity(log.getBeforeQuantity());
+            vo.setAfterQuantity(log.getAfterQuantity());
+            vo.setOrderNo(log.getOrderNo());
+            vo.setRemark(log.getRemark());
+            vo.setOperatorId(log.getOperatorId());
+            vo.setCreateTime(log.getCreateTime());
+            return vo;
+        }).collect(Collectors.toList());
+    }
+    
+    private String getChangeTypeName(Integer changeType) {
+        switch (changeType) {
+            case 1: return "入库";
+            case 2: return "出库";
+            case 3: return "盘点调整";
+            default: return "未知";
+        }
     }
 }
 

@@ -58,10 +58,11 @@ export function confirmInbound(id, operatorId) {
 /**
  * 删除采购订单
  */
-export function deletePurchaseOrder(id) {
+export function deletePurchaseOrder(id, operatorId) {
   return request({
     url: `/purchase/orders/${id}`,
-    method: 'delete'
+    method: 'delete',
+    params: { operatorId }
   })
 }
 

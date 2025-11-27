@@ -38,6 +38,12 @@ const routes = [
         meta: { title: '供应商管理', requiresAuth: true }
       },
       {
+        path: 'customer',
+        name: 'Customer',
+        component: () => import('@/views/customer/Customer.vue'),
+        meta: { title: '客户管理', requiresAuth: true }
+      },
+      {
         path: 'purchase',
         name: 'Purchase',
         component: () => import('@/views/purchase/Purchase.vue'),

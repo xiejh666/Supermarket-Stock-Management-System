@@ -5,6 +5,7 @@ import com.supermarket.common.Result;
 import com.supermarket.dto.UserDTO;
 import com.supermarket.service.SysUserService;
 import com.supermarket.vo.UserVO;
+import com.supermarket.vo.UserStatusVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -73,6 +74,13 @@ public class SysUserController {
             @RequestParam String newPassword) {
         userService.resetPassword(id, newPassword);
         return Result.success();
+    }
+
+    @GetMapping("/{id}/status")
+    @ApiOperation("获取用户状态")
+    public Result<UserStatusVO> getUserStatus(@PathVariable Long id) {
+        UserStatusVO userStatus = userService.getUserStatus(id);
+        return Result.success(userStatus);
     }
 }
 

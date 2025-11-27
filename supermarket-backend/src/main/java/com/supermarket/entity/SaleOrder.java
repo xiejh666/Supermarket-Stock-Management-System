@@ -27,6 +27,11 @@ public class SaleOrder {
      */
     private Integer status;
 
+    /**
+     * 取消原因
+     */
+    private String cancelReason;
+
     private Long cashierId;
 
     @TableField(fill = FieldFill.INSERT)

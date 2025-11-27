@@ -4,6 +4,8 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 /**
  * 库存VO
  */
@@ -28,12 +30,21 @@ public class InventoryVO {
 
     @ApiModelProperty("库存数量")
     private Integer quantity;
+    
+    @ApiModelProperty("当前库存（与quantity相同，前端兼容字段）")
+    private Integer stock;
 
     @ApiModelProperty("预警数量")
     private Integer warningQuantity;
+    
+    @ApiModelProperty("最小库存（与warningQuantity相同，前端兼容字段）")
+    private Integer minStock;
 
     @ApiModelProperty("是否预警")
     private Boolean isWarning;
+    
+    @ApiModelProperty("更新时间")
+    private LocalDateTime updateTime;
 }
 
 

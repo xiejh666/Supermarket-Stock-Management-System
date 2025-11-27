@@ -6,11 +6,38 @@
           <h2>💰 销售管理</h2>
           <p class="subtitle">管理销售订单信息</p>
         </div>
-        <el-button type="primary" @click="handleAdd">
+        <el-button v-if="canCreate('sale')" type="primary" @click="handleAdd">
           <el-icon><Plus /></el-icon>
           新增销售单
         </el-button>
       </div>
+      
+      <el-divider style="margin: 15px 0;" />
+      
+      <!-- 搜索栏 -->
+      <el-form :inline="true" :model="searchForm" class="search-form">
+        <el-form-item label="订单号">
+          <el-input v-model="searchForm.orderNo" placeholder="请输入订单号" clearable @keyup.enter="handleSearch" />
+        </el-form-item>
+        <el-form-item label="客户名称">
+          <el-input v-model="searchForm.customerName" placeholder="请输入客户名称" clearable @keyup.enter="handleSearch" />
+        </el-form-item>
+        <el-form-item label="销售日期">
+          <el-date-picker
+            v-model="searchForm.dateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="YYYY-MM-DD"
+            @change="handleSearch"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="handleSearch">查询</el-button>
+          <el-button @click="handleReset">重置</el-button>
+        </el-form-item>
+      </el-form>
     </el-card>
 
     <el-card class="table-card">
@@ -29,20 +56,17 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="saleDate" label="销售日期" width="120" />
         <el-table-column prop="createTime" label="创建时间" width="180" />
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleView(row)">详情</el-button>
-            <el-button
-              v-if="row.status === 0"
-              type="success"
-              link
-              @click="handleConfirm(row)"
-            >
-              确认出库
+            <el-button 
+              v-if="canDelete('sale')" 
+              type="danger" 
+              link 
+              @click="() => checkPermission('delete', 'sale', () => handleDelete(row))">
+              删除
             </el-button>
-            <el-button type="danger" link @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -67,20 +91,26 @@
     >
       <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
         <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="客户名称" prop="customerName">
-              <el-input v-model="form.customerName" placeholder="请输入客户名称" />
+          <el-col :span="8">
+            <el-form-item label="客户名称" prop="customerId">
+              <el-select v-model="form.customerId" placeholder="请选择客户" clearable filterable style="width: 100%" @change="handleCustomerChange">
+                <el-option
+                  v-for="customer in customerList"
+                  :key="customer.id"
+                  :label="customer.customerName"
+                  :value="customer.id"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="销售日期" prop="saleDate">
-              <el-date-picker
-                v-model="form.saleDate"
-                type="date"
-                placeholder="选择日期"
-                style="width: 100%"
-                value-format="YYYY-MM-DD"
-              />
+          <el-col :span="8">
+            <el-form-item label="手机号">
+              <el-input v-model="form.customerPhone" placeholder="选择客户后自动显示" readonly />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="地址">
+              <el-input v-model="form.customerAddress" placeholder="选择客户后自动显示" readonly />
             </el-form-item>
           </el-col>
         </el-row>
@@ -100,6 +130,7 @@
                   :key="product.id"
                   :label="product.productName"
                   :value="product.id"
+                  :disabled="product.status === 0"
                 />
               </el-select>
             </template>
@@ -135,6 +166,80 @@
         <el-button type="primary" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- 详情对话框 -->
+    <el-dialog
+      v-model="detailVisible"
+      title="销售订单详情"
+      width="800px"
+    >
+      <div v-if="detailForm" class="detail-content">
+        <el-descriptions title="基本信息" :column="2" border>
+          <el-descriptions-item label="订单编号">{{ detailForm.orderNo }}</el-descriptions-item>
+          <el-descriptions-item label="客户名称">{{ detailForm.customerName || '无' }}</el-descriptions-item>
+          <el-descriptions-item label="客户手机号">{{ detailForm.customerPhone || '无' }}</el-descriptions-item>
+          <el-descriptions-item label="客户地址">{{ detailForm.customerAddress || '无' }}</el-descriptions-item>
+          <el-descriptions-item label="创建时间">{{ detailForm.createTime }}</el-descriptions-item>
+          <el-descriptions-item label="状态">
+            <el-tag :type="getStatusType(detailForm.status)">
+              {{ getStatusText(detailForm.status) }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="总金额">
+             <span class="amount">¥{{ detailForm.totalAmount }}</span>
+          </el-descriptions-item>
+           <el-descriptions-item label="收银员">{{ detailForm.cashierName }}</el-descriptions-item>
+           <el-descriptions-item v-if="detailForm.status === 2" label="取消原因" :span="2">
+              {{ detailForm.cancelReason }}
+           </el-descriptions-item>
+        </el-descriptions>
+
+        <div class="section-title">商品明细</div>
+        <el-table :data="detailForm.items" border stripe>
+          <el-table-column prop="productCode" label="商品编码" width="150" />
+          <el-table-column prop="productName" label="商品名称" />
+          <el-table-column prop="unitPrice" label="单价" width="120">
+             <template #default="{ row }">¥{{ row.unitPrice }}</template>
+          </el-table-column>
+          <el-table-column prop="quantity" label="数量" width="100" />
+          <el-table-column prop="totalPrice" label="总价" width="120">
+             <template #default="{ row }">¥{{ row.totalPrice }}</template>
+          </el-table-column>
+        </el-table>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+           <el-button @click="detailVisible = false">关闭</el-button>
+           <template v-if="detailForm && detailForm.status === 0">
+              <el-button type="danger" @click="handleOpenCancel">取消支付</el-button>
+              <el-button type="success" @click="handlePay">确认支付</el-button>
+           </template>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 取消原因对话框 -->
+    <el-dialog
+      v-model="cancelVisible"
+      title="取消订单"
+      width="400px"
+    >
+       <el-form :model="cancelForm" label-width="80px">
+          <el-form-item label="取消原因" required>
+             <el-input 
+                v-model="cancelForm.reason" 
+                type="textarea" 
+                :rows="3" 
+                placeholder="请输入取消原因"
+             />
+          </el-form-item>
+       </el-form>
+       <template #footer>
+          <el-button @click="cancelVisible = false">返回</el-button>
+          <el-button type="primary" @click="handleCancel">确认取消</el-button>
+       </template>
+    </el-dialog>
+
   </div>
 </template>
 
@@ -144,28 +249,47 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import saleApi, { createSaleOrder } from '@/api/sale'
 import productApi from '@/api/product'
+import customerApi from '@/api/customer'
+import { canCreate, canDelete, checkPermission } from '@/utils/permission'
 
 const saleList = ref([])
 const productList = ref([])
+const customerList = ref([])
 const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+
+// 搜索表单
+const searchForm = ref({
+  orderNo: '',
+  customerName: '',
+  dateRange: []
+})
 
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增销售单')
 const formRef = ref(null)
 const form = ref({
-  customerName: '',
-  saleDate: '',
+  customerId: null,
+  customerPhone: '',
+  customerAddress: '',
   items: []
 })
 
+// 详情相关
+const detailVisible = ref(false)
+const detailForm = ref(null)
+
+// 取消相关
+const cancelVisible = ref(false)
+const cancelForm = ref({
+    reason: ''
+})
+const currentOrderId = ref(null)
+
 const rules = {
-  customerName: [
-    { required: true, message: '请输入客户名称', trigger: 'blur' }
-  ],
-  saleDate: [
-    { required: true, message: '请选择销售日期', trigger: 'change' }
+  customerId: [
+    { required: false, message: '请选择客户', trigger: 'change' }
   ]
 }
 
@@ -176,26 +300,49 @@ const totalAmount = computed(() => {
 })
 
 const getStatusType = (status) => {
-  const types = { 0: 'warning', 1: 'success', 2: 'danger' }
+  const types = { 0: 'warning', 1: 'success', 2: 'info' } // 0:待支付(warning), 1:已支付(success), 2:已取消(info)
   return types[status] || 'info'
 }
 
 const getStatusText = (status) => {
-  const texts = { 0: '待出库', 1: '已出库', 2: '已取消' }
+  const texts = { 0: '待支付', 1: '已支付', 2: '已取消' }
   return texts[status] || '未知'
 }
 
 const loadData = async () => {
   try {
-    const { data } = await saleApi.getList({
-      pageNum: pageNum.value,
-      pageSize: pageSize.value
-    })
+    const params = {
+      current: pageNum.value,
+      size: pageSize.value,
+      orderNo: searchForm.value.orderNo,
+      customerName: searchForm.value.customerName
+    }
+    
+    if (searchForm.value.dateRange && searchForm.value.dateRange.length === 2) {
+        params.startDate = searchForm.value.dateRange[0]
+        params.endDate = searchForm.value.dateRange[1]
+    }
+
+    const { data } = await saleApi.getList(params)
     saleList.value = data.records
     total.value = data.total
   } catch (error) {
     ElMessage.error('加载数据失败')
   }
+}
+
+const handleSearch = () => {
+  pageNum.value = 1
+  loadData()
+}
+
+const handleReset = () => {
+  searchForm.value = {
+    orderNo: '',
+    customerName: '',
+    dateRange: []
+  }
+  handleSearch()
 }
 
 const loadProducts = async () => {
@@ -207,13 +354,25 @@ const loadProducts = async () => {
   }
 }
 
-const handleAdd = () => {
+const loadCustomers = async () => {
+  try {
+    const { data } = await customerApi.getAll()
+    customerList.value = data
+  } catch (error) {
+    console.error('加载客户失败', error)
+  }
+}
+
+const handleAdd = async () => {
   dialogTitle.value = '新增销售单'
   form.value = {
-    customerName: '',
-    saleDate: new Date().toISOString().split('T')[0],
+    customerId: null,
+    customerPhone: '',
+    customerAddress: '',
     items: []
   }
+  // 打开对话框时重新加载客户列表，确保获取最新数据
+  await loadCustomers()
   dialogVisible.value = true
 }
 
@@ -232,13 +391,27 @@ const handleRemoveItem = (index) => {
 const handleProductChange = (row) => {
   const product = productList.value.find(p => p.id === row.productId)
   if (product) {
-    row.salePrice = product.salePrice || 0
+    row.salePrice = product.price || 0 // 注意：商品API返回的售价字段可能是price
   }
   calculateTotal()
 }
 
 const calculateTotal = () => {
   // 触发计算属性更新
+}
+
+const handleCustomerChange = (customerId) => {
+  if (customerId) {
+    const customer = customerList.value.find(c => c.id === customerId)
+    if (customer) {
+      form.value.customerPhone = customer.phone || ''
+      form.value.customerAddress = customer.address || ''
+    }
+  } else {
+    // 清空选择时，清空手机号和地址
+    form.value.customerPhone = ''
+    form.value.customerAddress = ''
+  }
 }
 
 const handleSubmit = async () => {
@@ -258,21 +431,52 @@ const handleSubmit = async () => {
   }
 }
 
-const handleView = (row) => {
-  ElMessage.info('查看详情功能开发中...')
+const handleView = async (row) => {
+  try {
+      const { data } = await saleApi.getDetail(row.id)
+      detailForm.value = data
+      detailVisible.value = true
+      currentOrderId.value = row.id
+  } catch (error) {
+      ElMessage.error('获取详情失败')
+  }
 }
 
-const handleConfirm = async (row) => {
-  await ElMessageBox.confirm('确定要确认出库吗？', '提示', {
-    type: 'warning'
-  })
-  try {
-    await saleApi.confirm(row.id)
-    ElMessage.success('出库成功')
-    loadData()
-  } catch (error) {
-    ElMessage.error('出库失败')
-  }
+const handlePay = async () => {
+    try {
+        await ElMessageBox.confirm('确定要确认支付吗？库存将被扣减。', '提示', {
+            type: 'warning'
+        })
+        await saleApi.pay(currentOrderId.value)
+        ElMessage.success('支付成功')
+        detailVisible.value = false
+        loadData()
+    } catch (error) {
+        if (error !== 'cancel') {
+            ElMessage.error('支付失败')
+        }
+    }
+}
+
+const handleOpenCancel = () => {
+    cancelForm.value.reason = ''
+    cancelVisible.value = true
+}
+
+const handleCancel = async () => {
+    if (!cancelForm.value.reason.trim()) {
+        ElMessage.warning('请输入取消原因')
+        return
+    }
+    try {
+        await saleApi.cancel(currentOrderId.value, cancelForm.value.reason)
+        ElMessage.success('取消成功')
+        cancelVisible.value = false
+        detailVisible.value = false
+        loadData()
+    } catch (error) {
+        ElMessage.error('取消失败')
+    }
 }
 
 const handleDelete = async (row) => {
@@ -291,6 +495,7 @@ const handleDelete = async (row) => {
 onMounted(() => {
   loadData()
   loadProducts()
+  loadCustomers()
 })
 </script>
 
@@ -321,6 +526,10 @@ onMounted(() => {
       }
     }
   }
+  
+  .search-form {
+     margin-top: 20px;
+  }
 
   .table-card {
     box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
@@ -329,6 +538,24 @@ onMounted(() => {
   .amount {
     color: #67c23a;
     font-weight: bold;
+  }
+  
+  .detail-content {
+      padding: 10px;
+  }
+  
+  .section-title {
+      margin: 20px 0 10px;
+      font-weight: bold;
+      font-size: 16px;
+      border-left: 4px solid #409EFF;
+      padding-left: 10px;
+  }
+  
+  .dialog-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
   }
 }
 </style>

@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.supermarket.mapper.SystemNotificationMapper">
+
+    <!-- 查询用户通知列表 -->
+    <select id="selectUserNotifications" resultType="com.supermarket.vo.SystemNotificationVO">
+        SELECT 
+            n.id,
+            n.title,
+            n.content,
+            n.type,
+            CASE n.type
+                WHEN 'PURCHASE_AUDIT' THEN '采购审核'
+                WHEN 'SALE_PAYMENT' THEN '销售支付'
+                WHEN 'SYSTEM' THEN '系统通知'
+                ELSE '未知'
+            END as typeDesc,
+            n.receiver_id as receiverId,
+            n.sender_id as senderId,
+            u.real_name as senderName,
+            n.business_id as businessId,
+            n.business_type as businessType,
+            CASE n.business_type
+                WHEN 'PURCHASE_ORDER' THEN '采购订单'
+                WHEN 'SALE_ORDER' THEN '销售订单'
+                ELSE '系统'
+            END as businessTypeDesc,
+            n.is_read as isRead,
+            n.priority,
+            CASE n.priority
+                WHEN 1 THEN '低'
+                WHEN 2 THEN '中'
+                WHEN 3 THEN '高'
+                ELSE '中'
+            END as priorityDesc,
+            n.create_time as createTime,
+            CASE 
+                WHEN TIMESTAMPDIFF(MINUTE, n.create_time, NOW()) &lt; 1 THEN '刚刚'
+                WHEN TIMESTAMPDIFF(MINUTE, n.create_time, NOW()) &lt; 60 THEN CONCAT(TIMESTAMPDIFF(MINUTE, n.create_time, NOW()), '分钟前')
+                WHEN TIMESTAMPDIFF(HOUR, n.create_time, NOW()) &lt; 24 THEN CONCAT(TIMESTAMPDIFF(HOUR, n.create_time, NOW()), '小时前')
+                WHEN TIMESTAMPDIFF(DAY, n.create_time, NOW()) &lt; 7 THEN CONCAT(TIMESTAMPDIFF(DAY, n.create_time, NOW()), '天前')
+                ELSE DATE_FORMAT(n.create_time, '%Y-%m-%d')
+            END as timeDesc
+        FROM system_notification n
+        LEFT JOIN sys_user u ON n.sender_id = u.id
+        WHERE (n.receiver_id = #{userId} OR n.receiver_id IS NULL)
+        <if test="isRead != null">
+            AND n.is_read = #{isRead}
+        </if>
+        ORDER BY n.create_time DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- 统计用户通知总数 -->
+    <select id="countUserNotifications" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM system_notification n
+        WHERE (n.receiver_id = #{userId} OR n.receiver_id IS NULL)
+        <if test="isRead != null">
+            AND n.is_read = #{isRead}
+        </if>
+    </select>
+
+    <!-- 获取最新动态 -->
+    <select id="selectRecentActivities" resultType="com.supermarket.vo.SystemNotificationVO">
+        SELECT 
+            n.id,
+            n.title,
+            n.content,
+            n.type,
+            CASE n.type
+                WHEN 'PURCHASE_AUDIT' THEN '采购审核'
+                WHEN 'SALE_PAYMENT' THEN '销售支付'
+                WHEN 'SYSTEM' THEN '系统通知'
+                ELSE '未知'
+            END as typeDesc,
+            n.receiver_id as receiverId,
+            n.sender_id as senderId,
+            u.real_name as senderName,
+            n.business_id as businessId,
+            n.business_type as businessType,
+            CASE n.business_type
+                WHEN 'PURCHASE_ORDER' THEN '采购订单'
+                WHEN 'SALE_ORDER' THEN '销售订单'
+                ELSE '系统'
+            END as businessTypeDesc,
+            n.is_read as isRead,
+            n.priority,
+            CASE n.priority
+                WHEN 1 THEN '低'
+                WHEN 2 THEN '中'
+                WHEN 3 THEN '高'
+                ELSE '中'
+            END as priorityDesc,
+            n.create_time as createTime,
+            CASE 
+                WHEN TIMESTAMPDIFF(MINUTE, n.create_time, NOW()) &lt; 1 THEN '刚刚'
+                WHEN TIMESTAMPDIFF(MINUTE, n.create_time, NOW()) &lt; 60 THEN CONCAT(TIMESTAMPDIFF(MINUTE, n.create_time, NOW()), '分钟前')
+                WHEN TIMESTAMPDIFF(HOUR, n.create_time, NOW()) &lt; 24 THEN CONCAT(TIMESTAMPDIFF(HOUR, n.create_time, NOW()), '小时前')
+                WHEN TIMESTAMPDIFF(DAY, n.create_time, NOW()) &lt; 7 THEN CONCAT(TIMESTAMPDIFF(DAY, n.create_time, NOW()), '天前')
+                ELSE DATE_FORMAT(n.create_time, '%Y-%m-%d')
+            END as timeDesc
+        FROM system_notification n
+        LEFT JOIN sys_user u ON n.sender_id = u.id
+        WHERE (n.receiver_id = #{userId} OR n.receiver_id IS NULL)
+        ORDER BY n.create_time DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

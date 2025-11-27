@@ -6,7 +6,7 @@
           <h2>📂 分类管理</h2>
           <p class="subtitle">管理商品分类信息</p>
         </div>
-        <el-button type="primary" @click="handleAdd">
+        <el-button v-if="canCreate('category')" type="primary" @click="handleAdd">
           <el-icon><Plus /></el-icon>
           新增分类
         </el-button>
@@ -21,8 +21,20 @@
         <el-table-column prop="createTime" label="创建时间" width="180" />
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link @click="handleEdit(row)">编辑</el-button>
-            <el-button type="danger" link @click="handleDelete(row)">删除</el-button>
+            <el-button 
+              v-if="canUpdate('category')" 
+              type="primary" 
+              link 
+              @click="() => checkPermission('update', 'category', () => handleEdit(row))">
+              编辑
+            </el-button>
+            <el-button 
+              v-if="canDelete('category')" 
+              type="danger" 
+              link 
+              @click="() => checkPermission('delete', 'category', () => handleDelete(row))">
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -71,6 +83,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import categoryApi from '@/api/category'
+import { canCreate, canUpdate, canDelete, checkPermission } from '@/utils/permission'
 
 const categoryList = ref([])
 const pageNum = ref(1)

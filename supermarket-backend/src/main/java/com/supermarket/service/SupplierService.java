@@ -25,17 +25,17 @@ public interface SupplierService extends IService<Supplier> {
     /**
      * 创建供应商
      */
-    void createSupplier(SupplierDTO dto);
+    void createSupplier(SupplierDTO dto, Long operatorId);
 
     /**
      * 更新供应商
      */
-    void updateSupplier(SupplierDTO dto);
+    void updateSupplier(SupplierDTO dto, Long operatorId);
 
     /**
      * 删除供应商
      */
-    void deleteSupplier(Long id);
+    void deleteSupplier(Long id, Long operatorId);
 }
 
 

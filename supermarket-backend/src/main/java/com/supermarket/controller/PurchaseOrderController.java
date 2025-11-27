@@ -96,8 +96,10 @@ public class PurchaseOrderController {
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除采购订单")
-    public Result<Void> deletePurchaseOrder(@PathVariable Long id) {
-        purchaseOrderService.deletePurchaseOrder(id);
+    public Result<Void> deletePurchaseOrder(
+            @PathVariable Long id,
+            @ApiParam("操作人ID") @RequestParam Long operatorId) {
+        purchaseOrderService.deletePurchaseOrder(id, operatorId);
         return Result.success();
     }
 }

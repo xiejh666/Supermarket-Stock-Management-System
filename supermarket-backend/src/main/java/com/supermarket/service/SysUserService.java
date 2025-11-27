@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.supermarket.dto.UserDTO;
 import com.supermarket.entity.SysUser;
 import com.supermarket.vo.UserVO;
+import com.supermarket.vo.UserStatusVO;
 
 /**
  * 用户服务接口
@@ -40,6 +41,11 @@ public interface SysUserService extends IService<SysUser> {
      * 重置密码
      */
     void resetPassword(Long id, String newPassword);
+
+    /**
+     * 获取用户状态
+     */
+    UserStatusVO getUserStatus(Long id);
 }
 
 

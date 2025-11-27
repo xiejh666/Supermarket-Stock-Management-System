@@ -8,6 +8,7 @@ import com.supermarket.exception.BusinessException;
 import com.supermarket.mapper.SysUserMapper;
 import com.supermarket.service.SysUserService;
 import com.supermarket.vo.UserVO;
+import com.supermarket.vo.UserStatusVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -152,6 +153,23 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
         user.setPassword(passwordEncoder.encode(newPassword));
         userMapper.updateById(user);
+    }
+
+    @Override
+    public UserStatusVO getUserStatus(Long id) {
+        SysUser user = userMapper.selectById(id);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+
+        String statusDesc = user.getStatus() == 1 ? "启用" : "禁用";
+
+        return UserStatusVO.builder()
+                .userId(user.getId())
+                .username(user.getUsername())
+                .status(user.getStatus())
+                .statusDesc(statusDesc)
+                .build();
     }
 }
 

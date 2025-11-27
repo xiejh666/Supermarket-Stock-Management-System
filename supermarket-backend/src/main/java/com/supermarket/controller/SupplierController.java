@@ -52,22 +52,28 @@ public class SupplierController {
 
     @PostMapping
     @ApiOperation("创建供应商")
-    public Result<Void> createSupplier(@Valid @RequestBody SupplierDTO dto) {
-        supplierService.createSupplier(dto);
+    public Result<Void> createSupplier(
+            @Valid @RequestBody SupplierDTO dto,
+            @ApiParam("操作人ID") @RequestParam Long operatorId) {
+        supplierService.createSupplier(dto, operatorId);
         return Result.success();
     }
 
     @PutMapping
     @ApiOperation("更新供应商")
-    public Result<Void> updateSupplier(@Valid @RequestBody SupplierDTO dto) {
-        supplierService.updateSupplier(dto);
+    public Result<Void> updateSupplier(
+            @Valid @RequestBody SupplierDTO dto,
+            @ApiParam("操作人ID") @RequestParam Long operatorId) {
+        supplierService.updateSupplier(dto, operatorId);
         return Result.success();
     }
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除供应商")
-    public Result<Void> deleteSupplier(@PathVariable Long id) {
-        supplierService.deleteSupplier(id);
+    public Result<Void> deleteSupplier(
+            @PathVariable Long id,
+            @ApiParam("操作人ID") @RequestParam Long operatorId) {
+        supplierService.deleteSupplier(id, operatorId);
         return Result.success();
     }
 }
