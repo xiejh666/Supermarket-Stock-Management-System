@@ -28,6 +28,9 @@ public class LoginVO {
 
     @ApiModelProperty("真实姓名")
     private String realName;
+    
+    @ApiModelProperty("用户头像URL")
+    private String avatar;
 
     @ApiModelProperty("角色编码")
     private String roleCode;

@@ -24,32 +24,35 @@ export function getCategoryTree() {
 /**
  * 创建分类
  */
-export function createCategory(data) {
+export function createCategory(data, operatorId) {
   return request({
     url: '/categories',
     method: 'post',
-    data
+    data,
+    params: { operatorId }
   })
 }
 
 /**
  * 更新分类
  */
-export function updateCategory(data) {
+export function updateCategory(data, operatorId) {
   return request({
     url: '/categories',
     method: 'put',
-    data
+    data,
+    params: { operatorId }
   })
 }
 
 /**
  * 删除分类
  */
-export function deleteCategory(id) {
+export function deleteCategory(id, operatorId) {
   return request({
     url: `/categories/${id}`,
-    method: 'delete'
+    method: 'delete',
+    params: { operatorId }
   })
 }
 

@@ -13,6 +13,7 @@ import com.supermarket.entity.SysUser;
 import com.supermarket.exception.BusinessException;
 import com.supermarket.mapper.*;
 import com.supermarket.service.BusinessOperationNotificationService;
+import com.supermarket.service.CacheService;
 import com.supermarket.service.InventoryService;
 import com.supermarket.service.SaleOrderService;
 import com.supermarket.service.SystemNotificationService;
@@ -25,7 +26,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -46,6 +49,10 @@ public class SaleOrderServiceImpl extends ServiceImpl<SaleOrderMapper, SaleOrder
     private final InventoryService inventoryService;
     private final SystemNotificationService notificationService;
     private final BusinessOperationNotificationService businessNotificationService;
+    private final CacheService cacheService;
+    
+    private static final String CACHE_KEY_SALES_TODAY_PREFIX = "sales:today:";
+    private static final String CACHE_KEY_SALES_MONTH_PREFIX = "sales:month:";
 
     @Override
     public Page<SaleOrderVO> getSaleOrderList(Integer current, Integer size, String orderNo, 
@@ -161,6 +168,13 @@ public class SaleOrderServiceImpl extends ServiceImpl<SaleOrderMapper, SaleOrder
             inventoryService.outbound(itemDTO.getProductId(), itemDTO.getQuantity(), 
                     orderNo, "销售出库", cashierId);
         }
+        
+        // 清除销售统计缓存
+        String today = LocalDate.now().toString();
+        String month = YearMonth.now().toString();
+        cacheService.evict(CACHE_KEY_SALES_TODAY_PREFIX + today);
+        cacheService.evict(CACHE_KEY_SALES_MONTH_PREFIX + month);
+        log.info("已清除销售统计缓存");
         
         // 发送销售订单创建通知
         log.info("=== 开始发送销售订单创建通知 ===");

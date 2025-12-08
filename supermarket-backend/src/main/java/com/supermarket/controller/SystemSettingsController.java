@@ -2,7 +2,6 @@ package com.supermarket.controller;
 
 import com.supermarket.common.Result;
 import com.supermarket.dto.SystemSettingsDTO;
-import com.supermarket.service.ExportService;
 import com.supermarket.service.SystemSettingsService;
 import com.supermarket.utils.JwtUtils;
 import io.swagger.annotations.Api;
@@ -11,8 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 
 /**
  * 系统设置控制器
@@ -24,7 +21,6 @@ import java.io.IOException;
 public class SystemSettingsController {
     
     private final SystemSettingsService systemSettingsService;
-    private final ExportService exportService;
     private final JwtUtils jwtUtils;
     
     /**
@@ -47,15 +43,6 @@ public class SystemSettingsController {
         Long userId = getUserIdFromRequest(request);
         systemSettingsService.saveSettings(userId, settings);
         return Result.success();
-    }
-    
-    /**
-     * 导出商品数据
-     */
-    @GetMapping("/export/products")
-    @ApiOperation("导出商品数据")
-    public void exportProducts(HttpServletResponse response) throws IOException {
-        exportService.exportProducts(response);
     }
     
     /**

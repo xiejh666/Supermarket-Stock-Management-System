@@ -6,6 +6,8 @@
           <h2>📦 采购管理</h2>
           <p class="subtitle">管理采购订单信息</p>
         </div>
+      </div>
+      <div class="header-actions">
         <el-button v-if="canCreate('purchase')" type="primary" @click="handleAdd">
           <el-icon><Plus /></el-icon>
           新增采购单
@@ -13,8 +15,54 @@
       </div>
     </el-card>
 
+    <!-- 搜索工具栏 -->
+    <el-card class="toolbar">
+      <el-form :model="queryForm" :inline="true">
+        <el-form-item label="采购单号">
+          <el-input v-model="queryForm.orderNo" placeholder="请输入采购单号" clearable style="width: 200px;" @keyup.enter="handleSearch" />
+        </el-form-item>
+        <el-form-item label="供应商">
+          <el-input v-model="queryForm.supplierName" placeholder="请输入供应商名称" clearable style="width: 180px;" @keyup.enter="handleSearch" />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="queryForm.status" placeholder="全部" clearable style="width: 140px;">
+            <el-option label="待审核" :value="0" />
+            <el-option label="已通过" :value="1" />
+            <el-option label="已拒绝" :value="2" />
+            <el-option label="已入库" :value="3" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="采购时间">
+          <el-date-picker
+            v-model="queryForm.createTimeRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            style="width: 260px;"
+            clearable
+          />
+        </el-form-item>
+        <el-form-item label="入库时间">
+          <el-date-picker
+            v-model="queryForm.inboundTimeRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            style="width: 260px;"
+            clearable
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
+          <el-button :icon="RefreshLeft" @click="handleReset">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
     <el-card class="table-card">
-      <el-table :data="purchaseList" stripe style="width: 100%">
+      <el-table :data="displayPurchaseList" stripe style="width: 100%">
         <el-table-column prop="orderNo" label="采购单号" width="180" />
         <el-table-column prop="supplierName" label="供应商" />
         <el-table-column prop="totalAmount" label="总金额" width="120">
@@ -211,8 +259,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, RefreshLeft, Plus } from '@element-plus/icons-vue'
 import purchaseApi, { createPurchaseOrder, confirmInbound } from '@/api/purchase'
 import supplierApi from '@/api/supplier'
 import productApi from '@/api/product'
@@ -220,11 +269,63 @@ import { useUserStore } from '@/store/user'
 import { canCreate, canDelete, canAudit, checkPermission } from '@/utils/permission'
 
 const purchaseList = ref([])
+const displayPurchaseList = ref([]) // 显示的列表
 const supplierList = ref([])
 const productList = ref([])
 const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+
+// 筛选表单
+const queryForm = reactive({
+  orderNo: '',
+  supplierName: '',
+  status: null,
+  createTimeRange: null,
+  inboundTimeRange: null
+})
+
+// 执行筛选
+const applyFilter = () => {
+  let list = purchaseList.value
+  
+  // 按采购单号筛选
+  if (queryForm.orderNo) {
+    list = list.filter(item => item.orderNo && item.orderNo.includes(queryForm.orderNo))
+  }
+  
+  // 按供应商名称筛选
+  if (queryForm.supplierName) {
+    list = list.filter(item => item.supplierName && item.supplierName.includes(queryForm.supplierName))
+  }
+  
+  // 按状态筛选
+  if (queryForm.status !== null && queryForm.status !== undefined && queryForm.status !== '') {
+    list = list.filter(item => item.status === queryForm.status)
+  }
+  
+  // 按采购时间筛选
+  if (queryForm.createTimeRange && queryForm.createTimeRange.length === 2) {
+    const [start, end] = queryForm.createTimeRange
+    list = list.filter(item => {
+      if (!item.createTime) return false
+      const createTime = new Date(item.createTime)
+      return createTime >= start && createTime <= end
+    })
+  }
+  
+  // 按入库时间筛选
+  if (queryForm.inboundTimeRange && queryForm.inboundTimeRange.length === 2) {
+    const [start, end] = queryForm.inboundTimeRange
+    list = list.filter(item => {
+      if (!item.inboundTime) return false
+      const inboundTime = new Date(item.inboundTime)
+      return inboundTime >= start && inboundTime <= end
+    })
+  }
+  
+  displayPurchaseList.value = list
+}
 
 const userStore = useUserStore()
 const dialogVisible = ref(false)
@@ -259,6 +360,22 @@ const totalAmount = computed(() => {
   }, 0).toFixed(2)
 })
 
+// 查询
+const handleSearch = () => {
+  applyFilter()
+}
+
+// 重置
+const handleReset = () => {
+  queryForm.orderNo = ''
+  queryForm.supplierName = ''
+  queryForm.status = null
+  queryForm.createTimeRange = null
+  queryForm.inboundTimeRange = null
+  // 重置后显示所有数据
+  displayPurchaseList.value = purchaseList.value
+}
+
 const getStatusType = (status) => {
   const typeMap = {
     0: 'warning',
@@ -287,6 +404,8 @@ const loadData = async () => {
     })
     purchaseList.value = data.records
     total.value = data.total
+    // 初始化显示列表
+    displayPurchaseList.value = data.records
   } catch (error) {
     ElMessage.error('加载数据失败')
   }
@@ -462,12 +581,9 @@ onMounted(() => {
 
   .page-header {
     margin-bottom: 20px;
+    position: relative;
 
     .header-content {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-
       .title-section {
         h2 {
           margin: 0 0 8px 0;
@@ -481,6 +597,13 @@ onMounted(() => {
           font-size: 14px;
         }
       }
+    }
+
+    .header-actions {
+      position: absolute;
+      top: 50%;
+      right: 20px;
+      transform: translateY(-50%);
     }
   }
 

@@ -24,22 +24,23 @@ export function getSaleOrderDetail(id) {
 /**
  * 创建销售订单
  */
-export function createSaleOrder(data, cashierId) {
+export function createSaleOrder(data, cashierId, operatorId) {
   return request({
     url: '/sale/orders',
     method: 'post',
     data,
-    params: { cashierId }
+    params: { cashierId, operatorId }
   })
 }
 
 /**
  * 支付订单
  */
-export function paySaleOrder(id) {
+export function paySaleOrder(id, operatorId) {
   return request({
     url: `/sale/orders/${id}/pay`,
-    method: 'put'
+    method: 'put',
+    params: { operatorId }
   })
 }
 
@@ -57,10 +58,11 @@ export function cancelSaleOrder(id, reason) {
 /**
  * 删除订单
  */
-export function deleteSaleOrder(id) {
+export function deleteSaleOrder(id, operatorId) {
   return request({
     url: `/sale/orders/${id}`,
-    method: 'delete'
+    method: 'delete',
+    params: { operatorId }
   })
 }
 

@@ -7,15 +7,20 @@ import com.supermarket.entity.Category;
 import com.supermarket.entity.Inventory;
 import com.supermarket.entity.InventoryLog;
 import com.supermarket.entity.Product;
+import com.supermarket.entity.SysUser;
 import com.supermarket.exception.BusinessException;
 import com.supermarket.mapper.CategoryMapper;
 import com.supermarket.mapper.InventoryLogMapper;
 import com.supermarket.mapper.InventoryMapper;
 import com.supermarket.mapper.ProductMapper;
+import com.supermarket.mapper.SysUserMapper;
+import com.supermarket.service.BusinessOperationNotificationService;
+import com.supermarket.service.CacheService;
 import com.supermarket.service.InventoryService;
 import com.supermarket.vo.InventoryLogVO;
 import com.supermarket.vo.InventoryVO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +32,7 @@ import java.util.stream.Collectors;
 /**
  * 库存服务实现
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class InventoryServiceImpl extends ServiceImpl<InventoryMapper, Inventory> implements InventoryService {
@@ -35,6 +41,12 @@ public class InventoryServiceImpl extends ServiceImpl<InventoryMapper, Inventory
     private final InventoryLogMapper inventoryLogMapper;
     private final ProductMapper productMapper;
     private final CategoryMapper categoryMapper;
+    private final BusinessOperationNotificationService businessNotificationService;
+    private final SysUserMapper userMapper;
+    private final CacheService cacheService;
+    
+    private static final String CACHE_KEY_INVENTORY_PREFIX = "inventory:";
+    private static final String CACHE_KEY_LOW_STOCK_COUNT = "inventory:low_stock_count";
 
     @Override
     public Page<InventoryVO> getInventoryList(Integer current, Integer size, String productName, Long categoryId, Boolean isWarning) {
@@ -136,16 +148,39 @@ public class InventoryServiceImpl extends ServiceImpl<InventoryMapper, Inventory
         }
         
         // 记录日志
-        InventoryLog log = new InventoryLog();
-        log.setProductId(productId);
-        log.setChangeType(1); // 入库
-        log.setChangeQuantity(quantity);
-        log.setBeforeQuantity(inventory.getQuantity() - quantity);
-        log.setAfterQuantity(inventory.getQuantity());
-        log.setOrderNo(orderNo);
-        log.setRemark(remark);
-        log.setOperatorId(operatorId);
-        inventoryLogMapper.insert(log);
+        InventoryLog inventoryLog = new InventoryLog();
+        inventoryLog.setProductId(productId);
+        inventoryLog.setChangeType(1); // 入库
+        inventoryLog.setChangeQuantity(quantity);
+        inventoryLog.setBeforeQuantity(inventory.getQuantity() - quantity);
+        inventoryLog.setAfterQuantity(inventory.getQuantity());
+        inventoryLog.setOrderNo(orderNo);
+        inventoryLog.setRemark(remark);
+        inventoryLog.setOperatorId(operatorId);
+        inventoryLogMapper.insert(inventoryLog);
+        
+        // 清除库存相关缓存
+        cacheService.evict(CACHE_KEY_INVENTORY_PREFIX + productId);
+        cacheService.evict(CACHE_KEY_LOW_STOCK_COUNT);
+        log.info("已清除库存缓存");
+        
+        // 发送库存入库通知
+        log.info("=== 开始发送库存入库通知 ===");
+        log.info("商品ID: {}, 操作人ID: {}, 数量: {}", productId, operatorId, quantity);
+        try {
+            Product product = productMapper.selectById(productId);
+            if (product != null) {
+                String operatorRole = getUserRole(operatorId);
+                log.info("操作人角色: {}", operatorRole);
+                
+                businessNotificationService.notifyInventoryOperation(
+                    operatorId, operatorRole, "INBOUND", product.getProductName(), productId, quantity
+                );
+                log.info("=== 库存入库通知发送完成 ===");
+            }
+        } catch (Exception e) {
+            log.error("=== 发送库存入库通知失败 ===", e);
+        }
     }
 
     @Override
@@ -174,16 +209,39 @@ public class InventoryServiceImpl extends ServiceImpl<InventoryMapper, Inventory
         inventoryMapper.updateById(inventory);
         
         // 记录日志
-        InventoryLog log = new InventoryLog();
-        log.setProductId(productId);
-        log.setChangeType(2); // 出库
-        log.setChangeQuantity(-quantity);
-        log.setBeforeQuantity(beforeQuantity);
-        log.setAfterQuantity(inventory.getQuantity());
-        log.setOrderNo(orderNo);
-        log.setRemark(remark);
-        log.setOperatorId(operatorId);
-        inventoryLogMapper.insert(log);
+        InventoryLog inventoryLog = new InventoryLog();
+        inventoryLog.setProductId(productId);
+        inventoryLog.setChangeType(2); // 出库
+        inventoryLog.setChangeQuantity(-quantity);
+        inventoryLog.setBeforeQuantity(beforeQuantity);
+        inventoryLog.setAfterQuantity(inventory.getQuantity());
+        inventoryLog.setOrderNo(orderNo);
+        inventoryLog.setRemark(remark);
+        inventoryLog.setOperatorId(operatorId);
+        inventoryLogMapper.insert(inventoryLog);
+        
+        // 清除库存相关缓存
+        cacheService.evict(CACHE_KEY_INVENTORY_PREFIX + productId);
+        cacheService.evict(CACHE_KEY_LOW_STOCK_COUNT);
+        log.info("已清除库存缓存");
+        
+        // 发送库存出库通知
+        log.info("=== 开始发送库存出库通知 ===");
+        log.info("商品ID: {}, 操作人ID: {}, 数量: {}", productId, operatorId, quantity);
+        try {
+            Product product = productMapper.selectById(productId);
+            if (product != null) {
+                String operatorRole = getUserRole(operatorId);
+                log.info("操作人角色: {}", operatorRole);
+                
+                businessNotificationService.notifyInventoryOperation(
+                    operatorId, operatorRole, "OUTBOUND", product.getProductName(), productId, quantity
+                );
+                log.info("=== 库存出库通知发送完成 ===");
+            }
+        } catch (Exception e) {
+            log.error("=== 发送库存出库通知失败 ===", e);
+        }
     }
 
     @Override
@@ -210,15 +268,38 @@ public class InventoryServiceImpl extends ServiceImpl<InventoryMapper, Inventory
         inventoryMapper.updateById(inventory);
         
         // 记录日志
-        InventoryLog log = new InventoryLog();
-        log.setProductId(productId);
-        log.setChangeType(3); // 盘点调整
-        log.setChangeQuantity(changeQuantity);
-        log.setBeforeQuantity(beforeQuantity);
-        log.setAfterQuantity(newQuantity);
-        log.setRemark(remark);
-        log.setOperatorId(operatorId);
-        inventoryLogMapper.insert(log);
+        InventoryLog inventoryLog = new InventoryLog();
+        inventoryLog.setProductId(productId);
+        inventoryLog.setChangeType(3); // 盘点调整
+        inventoryLog.setChangeQuantity(changeQuantity);
+        inventoryLog.setBeforeQuantity(beforeQuantity);
+        inventoryLog.setAfterQuantity(newQuantity);
+        inventoryLog.setRemark(remark);
+        inventoryLog.setOperatorId(operatorId);
+        inventoryLogMapper.insert(inventoryLog);
+        
+        // 清除库存相关缓存
+        cacheService.evict(CACHE_KEY_INVENTORY_PREFIX + productId);
+        cacheService.evict(CACHE_KEY_LOW_STOCK_COUNT);
+        log.info("已清除库存缓存");
+        
+        // 发送库存调整通知
+        log.info("=== 开始发送库存调整通知 ===");
+        log.info("商品ID: {}, 操作人ID: {}, 调整后数量: {}", productId, operatorId, newQuantity);
+        try {
+            Product product = productMapper.selectById(productId);
+            if (product != null) {
+                String operatorRole = getUserRole(operatorId);
+                log.info("操作人角色: {}", operatorRole);
+                
+                businessNotificationService.notifyInventoryOperation(
+                    operatorId, operatorRole, "ADJUST", product.getProductName(), productId, Math.abs(changeQuantity)
+                );
+                log.info("=== 库存调整通知发送完成 ===");
+            }
+        } catch (Exception e) {
+            log.error("=== 发送库存调整通知失败 ===", e);
+        }
     }
 
     @Override
@@ -277,6 +358,25 @@ public class InventoryServiceImpl extends ServiceImpl<InventoryMapper, Inventory
             case 2: return "出库";
             case 3: return "盘点调整";
             default: return "未知";
+        }
+    }
+    
+    /**
+     * 获取用户角色编码
+     */
+    private String getUserRole(Long userId) {
+        SysUser user = userMapper.selectById(userId);
+        if (user == null) {
+            log.warn("用户不存在，用户ID: {}", userId);
+            return "UNKNOWN";
+        }
+        
+        Long roleId = user.getRoleId();
+        switch (roleId.intValue()) {
+            case 1: return "ADMIN";
+            case 2: return "PURCHASER";
+            case 3: return "CASHIER";
+            default: return "UNKNOWN";
         }
     }
 }

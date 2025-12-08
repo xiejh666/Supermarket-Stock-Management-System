@@ -56,28 +56,34 @@ public class ProductController {
     @GetMapping("/{id}")
     @ApiOperation("根据ID查询商品")
     public Result<Product> getProductById(@PathVariable Long id) {
-        Product product = productService.getById(id);
+        Product product = ((com.supermarket.service.impl.ProductServiceImpl) productService).getProductDetail(id);
         return Result.success(product);
     }
 
     @PostMapping
     @ApiOperation("创建商品")
-    public Result<Void> createProduct(@Valid @RequestBody ProductDTO dto) {
-        productService.createProduct(dto);
+    public Result<Void> createProduct(
+            @Valid @RequestBody ProductDTO dto,
+            @ApiParam("操作人ID") @RequestParam Long operatorId) {
+        productService.createProduct(dto, operatorId);
         return Result.success();
     }
 
     @PutMapping
     @ApiOperation("更新商品")
-    public Result<Void> updateProduct(@Valid @RequestBody ProductDTO dto) {
-        productService.updateProduct(dto);
+    public Result<Void> updateProduct(
+            @Valid @RequestBody ProductDTO dto,
+            @ApiParam("操作人ID") @RequestParam Long operatorId) {
+        productService.updateProduct(dto, operatorId);
         return Result.success();
     }
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除商品")
-    public Result<Void> deleteProduct(@PathVariable Long id) {
-        productService.deleteProduct(id);
+    public Result<Void> deleteProduct(
+            @PathVariable Long id,
+            @ApiParam("操作人ID") @RequestParam Long operatorId) {
+        productService.deleteProduct(id, operatorId);
         return Result.success();
     }
 
@@ -85,8 +91,9 @@ public class ProductController {
     @ApiOperation("修改商品状态")
     public Result<Void> updateProductStatus(
             @PathVariable Long id,
-            @RequestParam Integer status) {
-        productService.updateProductStatus(id, status);
+            @RequestParam Integer status,
+            @ApiParam("操作人ID") @RequestParam Long operatorId) {
+        productService.updateProductStatus(id, status, operatorId);
         return Result.success();
     }
 }

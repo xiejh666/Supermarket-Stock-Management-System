@@ -25,17 +25,17 @@ public interface CategoryService extends IService<Category> {
     /**
      * 创建分类
      */
-    void createCategory(CategoryDTO dto);
+    void createCategory(CategoryDTO dto, Long operatorId);
 
     /**
      * 更新分类
      */
-    void updateCategory(CategoryDTO dto);
+    void updateCategory(CategoryDTO dto, Long operatorId);
 
     /**
      * 删除分类
      */
-    void deleteCategory(Long id);
+    void deleteCategory(Long id, Long operatorId);
 }
 
 

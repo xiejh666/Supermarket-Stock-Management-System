@@ -82,9 +82,9 @@ mvn clean install
 mvn spring-boot:run
 ```
 
-后端服务将在 http://localhost:8080 启动
+后端服务将在 http://8.136.43.180:8080 启动
 
-API文档地址：http://localhost:8080/api/doc.html
+API文档地址：http://8.136.43.180:8080/api/doc.html
 
 ### 2. 前端启动
 
@@ -94,7 +94,7 @@ npm install
 npm run dev
 ```
 
-前端服务将在 http://localhost:3000 启动
+前端服务将在 http://8.136.43.180:3000 启动
 
 ### 3. 数据库初始化
 
@@ -257,11 +257,11 @@ npm run dev
 - 环境配置建议
 
 ### 使用 Swagger 文档
-启动后端服务后，访问：`http://localhost:8080/api/doc.html`
+启动后端服务后，访问：`http://8.136.43.180:8080/api/doc.html`
 
 ### 数据库管理
 使用 DataGrip 连接数据库：
-- **Host**: localhost
+- **Host**: 8.136.43.180
 - **Port**: 3306
 - **Database**: supermarket_db
 - **Username**: root
@@ -310,7 +310,7 @@ npm install
 npm run dev
 ```
 
-访问：http://localhost:3000
+访问：http://8.136.43.180:3000
 
 ## 许可证
 

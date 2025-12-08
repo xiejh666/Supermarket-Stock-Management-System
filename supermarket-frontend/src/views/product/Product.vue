@@ -9,6 +9,8 @@
           </h2>
           <p class="subtitle">管理商品信息</p>
         </div>
+      </div>
+      <div class="header-actions">
         <el-button v-if="canCreate('product')" type="primary" :icon="Plus" @click="handleAdd">新增商品</el-button>
       </div>
     </el-card>
@@ -17,10 +19,10 @@
     <el-card class="toolbar">
       <el-form :model="queryForm" :inline="true">
         <el-form-item label="商品名称">
-          <el-input v-model="queryForm.productName" placeholder="请输入商品名称" clearable />
+          <el-input v-model="queryForm.productName" placeholder="请输入商品名称" clearable style="width: 200px;" />
         </el-form-item>
         <el-form-item label="商品分类">
-          <el-select v-model="queryForm.categoryId" placeholder="请选择分类" clearable>
+          <el-select v-model="queryForm.categoryId" placeholder="请选择分类" clearable style="width: 180px;">
             <el-option
               v-for="category in categories"
               :key="category.id"
@@ -30,7 +32,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="queryForm.status" placeholder="全部" clearable>
+          <el-select v-model="queryForm.status" placeholder="全部" clearable style="width: 120px;">
             <el-option label="上架" :value="1" />
             <el-option label="下架" :value="0" />
           </el-select>
@@ -53,18 +55,7 @@
       >
         <el-table-column type="index" label="序号" width="60" />
         <el-table-column prop="productCode" label="商品编码" width="120" />
-        <el-table-column prop="productName" label="商品名称" min-width="150">
-          <template #default="{ row }">
-            <div class="product-info">
-              <el-avatar
-                :size="40"
-                :src="row.imageUrl || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'"
-                shape="square"
-              />
-              <span class="product-name">{{ row.productName }}</span>
-            </div>
-          </template>
-        </el-table-column>
+        <el-table-column prop="productName" label="商品名称" min-width="150" />
         <el-table-column prop="specification" label="规格" width="100" />
         <el-table-column prop="unit" label="单位" width="80" />
         <el-table-column prop="costPrice" label="成本价" width="100">
@@ -265,7 +256,20 @@
           />
         </el-form-item>
         <el-form-item label="商品图片">
-          <el-input v-model="form.imageUrl" placeholder="请输入图片URL" />
+          <el-upload
+            class="product-image-uploader"
+            :action="uploadUrl"
+            :headers="uploadHeaders"
+            :show-file-list="false"
+            :on-success="handleImageSuccess"
+            :on-error="handleImageError"
+            :before-upload="beforeImageUpload"
+            accept="image/*"
+          >
+            <img v-if="form.imageUrl" :src="form.imageUrl" class="product-image" />
+            <el-icon v-else class="image-uploader-icon"><Plus /></el-icon>
+          </el-upload>
+          <div class="upload-tip">支持jpg、png格式，大小不超过5MB</div>
         </el-form-item>
         <el-form-item label="商品描述">
           <el-input
@@ -285,7 +289,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Goods,
@@ -298,6 +302,7 @@ import {
 } from '@element-plus/icons-vue'
 import {
   getProductList,
+  getProductDetail,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -305,7 +310,10 @@ import {
 } from '@/api/product'
 import { getAllCategories } from '@/api/category'
 import { canCreate, canUpdate, canDelete, checkPermission } from '@/utils/permission'
+import { getToken } from '@/utils/auth'
+import { useUserStore } from '@/store/user'
 
+const userStore = useUserStore()
 const loading = ref(false)
 const submitLoading = ref(false)
 const dialogVisible = ref(false)
@@ -354,6 +362,43 @@ const rules = {
   retailPrice: [
     { required: true, message: '请输入零售价', trigger: 'blur' }
   ]
+}
+
+// 图片上传配置
+const uploadUrl = ref('/api/upload/product')
+const uploadHeaders = computed(() => ({
+  'Authorization': `Bearer ${getToken()}`
+}))
+
+// 上传前验证
+const beforeImageUpload = (file) => {
+  const isImage = file.type.startsWith('image/')
+  const isLt5M = file.size / 1024 / 1024 < 5
+
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件!')
+    return false
+  }
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过 5MB!')
+    return false
+  }
+  return true
+}
+
+// 上传成功
+const handleImageSuccess = (response) => {
+  if (response.code === 200) {
+    form.imageUrl = response.data
+    ElMessage.success('图片上传成功')
+  } else {
+    ElMessage.error(response.message || '图片上传失败')
+  }
+}
+
+// 上传失败
+const handleImageError = () => {
+  ElMessage.error('图片上传失败，请重试')
 }
 
 // 获取商品列表
@@ -441,10 +486,16 @@ const handleAdd = () => {
 }
 
 // 编辑
-const handleEdit = (row) => {
-  dialogTitle.value = '编辑商品'
-  Object.assign(form, row)
-  dialogVisible.value = true
+const handleEdit = async (row) => {
+  try {
+    dialogTitle.value = '编辑商品'
+    // 调用详情接口获取完整信息（包括库存预警）
+    const { data } = await getProductDetail(row.id)
+    Object.assign(form, data)
+    dialogVisible.value = true
+  } catch (error) {
+    ElMessage.error('获取商品详情失败')
+  }
 }
 
 // 查看
@@ -474,7 +525,8 @@ const handleDelete = async (row) => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await deleteProduct(row.id)
+    const operatorId = userStore.userInfo?.userId || userStore.userInfo?.id
+    await deleteProduct(row.id, operatorId)
     ElMessage.success('删除成功')
     fetchData()
   } catch (error) {
@@ -487,7 +539,8 @@ const handleDelete = async (row) => {
 // 修改状态
 const handleStatusChange = async (row) => {
   try {
-    await updateProductStatus(row.id, row.status)
+    const operatorId = userStore.userInfo?.userId || userStore.userInfo?.id
+    await updateProductStatus(row.id, row.status, operatorId)
     ElMessage.success(row.status === 1 ? '已上架' : '已下架')
   } catch (error) {
     ElMessage.error('操作失败')
@@ -501,11 +554,13 @@ const handleSubmit = async () => {
     await formRef.value.validate()
     submitLoading.value = true
     
+    const operatorId = userStore.userInfo?.userId || userStore.userInfo?.id
+    
     if (form.id) {
-      await updateProduct(form)
+      await updateProduct(form, operatorId)
       ElMessage.success('更新成功')
     } else {
-      await createProduct(form)
+      await createProduct(form, operatorId)
       ElMessage.success('创建成功')
     }
     
@@ -532,12 +587,9 @@ onMounted(() => {
 
   .page-header {
     margin-bottom: 20px;
+    position: relative;
 
     .header-content {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-
       .title-section {
         h2 {
           margin: 0 0 8px 0;
@@ -554,6 +606,13 @@ onMounted(() => {
           font-size: 14px;
         }
       }
+    }
+
+    .header-actions {
+      position: absolute;
+      top: 50%;
+      right: 20px;
+      transform: translateY(-50%);
     }
   }
 
@@ -588,6 +647,46 @@ onMounted(() => {
   :deep(.el-pagination) {
     margin-top: 24px;
     justify-content: center;
+  }
+
+  // 商品图片上传样式
+  .product-image-uploader {
+    :deep(.el-upload) {
+      border: 1px dashed #d9d9d9;
+      border-radius: 6px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+      width: 178px;
+      height: 178px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &:hover {
+        border-color: #409eff;
+      }
+    }
+
+    .product-image {
+      width: 178px;
+      height: 178px;
+      display: block;
+      object-fit: cover;
+    }
+
+    .image-uploader-icon {
+      font-size: 28px;
+      color: #8c939d;
+      text-align: center;
+    }
+  }
+
+  .upload-tip {
+    font-size: 12px;
+    color: #909399;
+    margin-top: 8px;
   }
 }
 </style>

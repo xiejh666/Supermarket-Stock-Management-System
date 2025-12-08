@@ -8,6 +8,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.ConstraintViolationException;
@@ -66,11 +67,39 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 处理文件上传大小超限异常
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public Result<?> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e) {
+        log.error("文件上传大小超限：{}", e.getMessage());
+        long maxSize = e.getMaxUploadSize();
+        String message;
+        if (maxSize > 0) {
+            long maxSizeMB = maxSize / (1024 * 1024);
+            message = String.format("上传文件大小超过限制，最大允许 %dMB", maxSizeMB);
+        } else {
+            message = "上传文件大小超过限制，请上传较小的文件";
+        }
+        return Result.error(ResultCode.PARAM_ERROR.getCode(), message);
+    }
+
+    /**
      * 处理其他异常
      */
     @ExceptionHandler(Exception.class)
     public Result<?> handleException(Exception e) {
         log.error("系统异常：", e);
+        // 检查是否是常见的异常类型，提供更友好的提示
+        String message = e.getMessage();
+        if (message != null) {
+            if (message.contains("Access denied") || message.contains("权限")) {
+                return Result.error(ResultCode.ERROR.getCode(), "权限不足，请联系管理员");
+            } else if (message.contains("Connection") || message.contains("连接")) {
+                return Result.error(ResultCode.ERROR.getCode(), "网络连接异常，请稍后重试");
+            } else if (message.contains("Timeout") || message.contains("超时")) {
+                return Result.error(ResultCode.ERROR.getCode(), "操作超时，请稍后重试");
+            }
+        }
         return Result.error(ResultCode.ERROR.getCode(), "系统异常，请联系管理员");
     }
 }

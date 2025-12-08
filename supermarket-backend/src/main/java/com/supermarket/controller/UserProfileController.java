@@ -7,12 +7,12 @@ import com.supermarket.dto.UserProfileDTO;
 import com.supermarket.entity.SysUser;
 import com.supermarket.mapper.SysRoleMapper;
 import com.supermarket.mapper.SysUserMapper;
+import com.supermarket.service.SysUserService;
 import com.supermarket.utils.JwtUtils;
 import io.jsonwebtoken.Claims;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -31,6 +31,7 @@ public class UserProfileController {
     
     private final SysUserMapper userMapper;
     private final SysRoleMapper roleMapper;
+    private final SysUserService userService;
     private final JwtUtils jwtUtils;
     private final BCryptPasswordEncoder passwordEncoder;
     
@@ -86,6 +87,7 @@ public class UserProfileController {
         dto.setRealName(user.getRealName());
         dto.setPhone(user.getPhone());
         dto.setEmail(user.getEmail());
+        dto.setAvatar(user.getAvatar());  // 返回头像URL
         dto.setStatus(user.getStatus());
         dto.setRoleName(user.getRoleName());
         dto.setRoleCode(user.getRoleCode());
@@ -169,6 +171,33 @@ public class UserProfileController {
             return Result.success();
         } else {
             return Result.error("修改密码失败");
+        }
+    }
+    
+    /**
+     * 更新用户头像
+     */
+    @PutMapping("/avatar")
+    @ApiOperation("更新用户头像")
+    public Result<Void> updateAvatar(
+            @RequestParam("avatarUrl") String avatarUrl,
+            HttpServletRequest httpRequest
+    ) {
+        Long userId = getUserIdFromRequest(httpRequest);
+        
+        if (userId == null) {
+            return Result.error("无法获取用户信息");
+        }
+        
+        if (!StringUtils.hasText(avatarUrl)) {
+            return Result.error("头像URL不能为空");
+        }
+        
+        try {
+            userService.updateAvatar(userId, avatarUrl);
+            return Result.success();
+        } catch (Exception e) {
+            return Result.error("更新头像失败：" + e.getMessage());
         }
     }
 }

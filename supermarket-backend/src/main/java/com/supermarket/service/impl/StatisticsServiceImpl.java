@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 public class StatisticsServiceImpl implements StatisticsService {
 
     private final SaleOrderMapper saleOrderMapper;
+    private final SaleOrderItemMapper saleOrderItemMapper;
     private final ProductMapper productMapper;
     private final InventoryMapper inventoryMapper;
     private final PurchaseOrderMapper purchaseOrderMapper;
@@ -254,46 +255,79 @@ public class StatisticsServiceImpl implements StatisticsService {
      * @param period 时间周期 (week/month/year)
      */
     private List<StatisticsVO.CategoryRatioData> getCategoryRatioData(String period) {
+        // 计算时间范围
+        LocalDateTime startTime = getStartTimeByPeriod(period);
+        LocalDateTime endTime = LocalDateTime.now();
 
-        // 获取所有分类
-        List<Category> categories = categoryMapper.selectList(null);
-        List<StatisticsVO.CategoryRatioData> categoryRatioList = new ArrayList<>();
+        // 获取时间范围内所有已完成的销售订单
+        List<SaleOrder> saleOrders = saleOrderMapper.selectList(
+                new LambdaQueryWrapper<SaleOrder>()
+                        .eq(SaleOrder::getStatus, 1) // 只统计已完成的订单
+                        .between(SaleOrder::getCreateTime, startTime, endTime)
+        );
 
-        BigDecimal totalSales = BigDecimal.ZERO;
-        Map<Long, BigDecimal> categorySalesMap = new HashMap<>();
-
-        // 计算每个分类的销售额
-        for (Category category : categories) {
-            // 获取该分类下的所有商品
-            List<Product> products = productMapper.selectList(
-                    new LambdaQueryWrapper<Product>()
-                            .eq(Product::getCategoryId, category.getId())
-            );
-
-            BigDecimal categorySales = BigDecimal.ZERO;
-            if (!products.isEmpty()) {
-                // 获取该分类在指定时间范围内的实际销售额
-                // 这里简化处理：根据时间范围和分类特点模拟不同的销售额
-                BigDecimal baseSales = getBaseSalesForPeriod(period);
-                double categoryMultiplier = getCategoryMultiplier(category.getCategoryName(), period);
-                categorySales = baseSales.multiply(BigDecimal.valueOf(categoryMultiplier))
-                        .setScale(2, RoundingMode.HALF_UP);
-            }
-
-            categorySalesMap.put(category.getId(), categorySales);
-            totalSales = totalSales.add(categorySales);
+        if (saleOrders.isEmpty()) {
+            return new ArrayList<>();
         }
 
-        // 计算占比
-        for (Category category : categories) {
-            BigDecimal sales = categorySalesMap.get(category.getId());
-            Double percentage = totalSales.compareTo(BigDecimal.ZERO) > 0 
-                    ? sales.divide(totalSales, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100)).doubleValue()
-                    : 0.0;
+        // 获取所有订单ID
+        List<Long> orderIds = saleOrders.stream()
+                .map(SaleOrder::getId)
+                .collect(Collectors.toList());
 
-            if (sales.compareTo(BigDecimal.ZERO) > 0) {
+        // 获取所有订单明细
+        List<SaleOrderItem> orderItems = saleOrderItemMapper.selectList(
+                new LambdaQueryWrapper<SaleOrderItem>()
+                        .in(SaleOrderItem::getOrderId, orderIds)
+        );
+
+        // 统计每个分类的销售额
+        Map<Long, BigDecimal> categorySalesMap = new HashMap<>();
+        Map<Long, String> categoryNameMap = new HashMap<>();
+        BigDecimal totalSales = BigDecimal.ZERO;
+
+        for (SaleOrderItem item : orderItems) {
+            // 获取商品信息
+            Product product = productMapper.selectById(item.getProductId());
+            if (product != null && product.getCategoryId() != null) {
+                Long categoryId = product.getCategoryId();
+                
+                // 计算该商品的销售额（数量 * 单价）
+                BigDecimal itemSales = item.getUnitPrice()
+                        .multiply(BigDecimal.valueOf(item.getQuantity()))
+                        .setScale(2, RoundingMode.HALF_UP);
+                
+                // 累加到分类销售额
+                categorySalesMap.put(categoryId, 
+                        categorySalesMap.getOrDefault(categoryId, BigDecimal.ZERO).add(itemSales));
+                totalSales = totalSales.add(itemSales);
+                
+                // 保存分类名称
+                if (!categoryNameMap.containsKey(categoryId)) {
+                    Category category = categoryMapper.selectById(categoryId);
+                    if (category != null) {
+                        categoryNameMap.put(categoryId, category.getCategoryName());
+                    }
+                }
+            }
+        }
+
+        // 构建返回数据
+        List<StatisticsVO.CategoryRatioData> categoryRatioList = new ArrayList<>();
+        for (Map.Entry<Long, BigDecimal> entry : categorySalesMap.entrySet()) {
+            Long categoryId = entry.getKey();
+            BigDecimal sales = entry.getValue();
+            String categoryName = categoryNameMap.get(categoryId);
+            
+            if (categoryName != null && sales.compareTo(BigDecimal.ZERO) > 0) {
+                Double percentage = totalSales.compareTo(BigDecimal.ZERO) > 0 
+                        ? sales.divide(totalSales, 4, RoundingMode.HALF_UP)
+                                .multiply(BigDecimal.valueOf(100))
+                                .doubleValue()
+                        : 0.0;
+                
                 categoryRatioList.add(StatisticsVO.CategoryRatioData.builder()
-                        .name(category.getCategoryName())
+                        .name(categoryName)
                         .value(sales)
                         .percentage(percentage)
                         .build());
@@ -476,73 +510,27 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     /**
-     * 根据时间周期获取基础销售额
-     * @param period 时间周期
-     * @return 基础销售额
+     * 根据时间周期获取开始时间
+     * @param period 时间周期 (week/month/year)
+     * @return 开始时间
      */
-    private BigDecimal getBaseSalesForPeriod(String period) {
+    private LocalDateTime getStartTimeByPeriod(String period) {
+        LocalDate today = LocalDate.now();
         switch (period) {
             case "week":
-                return BigDecimal.valueOf(5000); // 周基础销售额
+                // 本周一
+                return LocalDateTime.of(today.minusDays(today.getDayOfWeek().getValue() - 1), LocalTime.MIN);
             case "month":
-                return BigDecimal.valueOf(20000); // 月基础销售额
+                // 本月第一天
+                return LocalDateTime.of(today.withDayOfMonth(1), LocalTime.MIN);
             case "year":
-                return BigDecimal.valueOf(200000); // 年基础销售额
+                // 本年第一天
+                return LocalDateTime.of(today.withDayOfYear(1), LocalTime.MIN);
             default:
-                return BigDecimal.valueOf(20000);
+                // 默认本月
+                return LocalDateTime.of(today.withDayOfMonth(1), LocalTime.MIN);
         }
     }
 
-    /**
-     * 获取分类在不同时间周期的销售倍数（模拟季节性和时间性变化）
-     * @param categoryName 分类名称
-     * @param period 时间周期
-     * @return 销售倍数
-     */
-    private double getCategoryMultiplier(String categoryName, String period) {
-        if (categoryName == null) return 0.1;
-        
-        // 根据分类名称和时间周期返回不同的倍数，模拟真实的销售变化
-        switch (categoryName) {
-            case "食品饮料":
-            case "饮料":
-                switch (period) {
-                    case "week": return 0.40; // 本周40%
-                    case "month": return 0.35; // 本月35%
-                    case "year": return 0.32; // 本年32%
-                    default: return 0.35;
-                }
-            case "日用品":
-                switch (period) {
-                    case "week": return 0.25; // 本周25%
-                    case "month": return 0.28; // 本月28%
-                    case "year": return 0.30; // 本年30%
-                    default: return 0.28;
-                }
-            case "零食":
-                switch (period) {
-                    case "week": return 0.20; // 本周20%
-                    case "month": return 0.22; // 本月22%
-                    case "year": return 0.25; // 本年25%
-                    default: return 0.22;
-                }
-            case "生鲜":
-                switch (period) {
-                    case "week": return 0.12; // 本周12%
-                    case "month": return 0.10; // 本月10%
-                    case "year": return 0.08; // 本年8%
-                    default: return 0.10;
-                }
-            case "其他":
-                switch (period) {
-                    case "week": return 0.03; // 本周3%
-                    case "month": return 0.05; // 本月5%
-                    case "year": return 0.05; // 本年5%
-                    default: return 0.05;
-                }
-            default:
-                return 0.1; // 默认10%
-        }
-    }
 }
 

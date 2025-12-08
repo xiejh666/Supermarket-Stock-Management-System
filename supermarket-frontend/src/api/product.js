@@ -24,43 +24,46 @@ export function getProductDetail(id) {
 /**
  * 创建商品
  */
-export function createProduct(data) {
+export function createProduct(data, operatorId) {
   return request({
     url: '/products',
     method: 'post',
-    data
+    data,
+    params: { operatorId }
   })
 }
 
 /**
  * 更新商品
  */
-export function updateProduct(data) {
+export function updateProduct(data, operatorId) {
   return request({
     url: '/products',
     method: 'put',
-    data
+    data,
+    params: { operatorId }
   })
 }
 
 /**
  * 删除商品
  */
-export function deleteProduct(id) {
+export function deleteProduct(id, operatorId) {
   return request({
     url: `/products/${id}`,
-    method: 'delete'
+    method: 'delete',
+    params: { operatorId }
   })
 }
 
 /**
  * 修改商品状态
  */
-export function updateProductStatus(id, status) {
+export function updateProductStatus(id, status, operatorId) {
   return request({
     url: `/products/${id}/status`,
     method: 'put',
-    params: { status }
+    params: { status, operatorId }
   })
 }
 

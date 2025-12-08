@@ -36,4 +36,22 @@ public class TestNotificationController {
             return "通知发送失败：" + e.getMessage();
         }
     }
+
+    @PostMapping("/product-notification")
+    @ApiOperation("测试商品通知")
+    public String testProductNotification(@RequestParam Long operatorId, 
+                                        @RequestParam String operatorRole) {
+        try {
+            log.info("开始测试商品通知发送，操作人ID: {}, 角色: {}", operatorId, operatorRole);
+            
+            businessNotificationService.notifyProductOperation(
+                operatorId, operatorRole, "CREATE", "测试商品", 999L
+            );
+            
+            return "商品通知发送成功！请检查是否收到通知。";
+        } catch (Exception e) {
+            log.error("测试商品通知发送失败", e);
+            return "商品通知发送失败：" + e.getMessage();
+        }
+    }
 }

@@ -6,6 +6,8 @@
           <h2>🏢 供应商管理</h2>
           <p class="subtitle">管理供应商信息</p>
         </div>
+      </div>
+      <div class="header-actions">
         <el-button v-if="canCreate('supplier')" type="primary" @click="handleAdd">
           <el-icon><Plus /></el-icon>
           新增供应商
@@ -202,12 +204,9 @@ onMounted(() => {
 
   .page-header {
     margin-bottom: 20px;
+    position: relative;
 
     .header-content {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-
       .title-section {
         h2 {
           margin: 0 0 8px 0;
@@ -221,6 +220,13 @@ onMounted(() => {
           font-size: 14px;
         }
       }
+    }
+
+    .header-actions {
+      position: absolute;
+      top: 50%;
+      right: 20px;
+      transform: translateY(-50%);
     }
   }
 

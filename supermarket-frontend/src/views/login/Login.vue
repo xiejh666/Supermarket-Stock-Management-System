@@ -71,7 +71,7 @@ const handleLogin = async () => {
   await loginFormRef.value.validate(async (valid) => {
     if (valid) {
       try {
-        // 注意：这里的 URL 会被 Vite 代理到 http://localhost:8080/api/auth/login
+        // 注意：这里的 URL 会被 Vite 代理到 http://8.136.43.180:8080/api/auth/login
         const res = await request.post('/auth/login', loginForm)
         if (res.code === 200) {
           userStore.setToken(res.data.token)

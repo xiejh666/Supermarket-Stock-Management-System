@@ -115,5 +115,26 @@ public class JwtUtils {
             return false;
         }
     }
+
+    /**
+     * 获取Token剩余有效时间（秒）
+     * 用于Token黑名单功能
+     */
+    public long getExpireSeconds(String token) {
+        try {
+            Claims claims = getClaimsFromToken(token);
+            Date expiration = claims.getExpiration();
+            Date now = new Date();
+            long diff = expiration.getTime() - now.getTime();
+            // 如果已过期，返回0
+            if (diff <= 0) {
+                return 0;
+            }
+            // 转换为秒
+            return diff / 1000;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
 }
 

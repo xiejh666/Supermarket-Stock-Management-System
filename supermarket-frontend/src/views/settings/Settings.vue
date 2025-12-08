@@ -135,36 +135,6 @@
               </div>
             </el-tab-pane>
 
-            <!-- 数据设置 -->
-            <el-tab-pane label="数据设置" name="data">
-              <div class="settings-section">
-                <h3 class="section-title">数据导出</h3>
-                <el-row :gutter="20" style="margin-top: 20px;">
-                  <el-col :span="12">
-                    <el-card class="data-card" shadow="hover">
-                      <div class="data-card-icon">
-                        <el-icon color="#409eff" :size="40"><Download /></el-icon>
-                      </div>
-                      <div class="data-card-content">
-                        <h4>导出商品数据</h4>
-                        <p>导出所有商品信息到Excel文件</p>
-                        <el-button 
-                          type="primary" 
-                          size="small" 
-                          :loading="exportLoading"
-                          @click="handleExportProducts"
-                          style="margin-top: 10px;"
-                        >
-                          <el-icon><Download /></el-icon>
-                          立即导出
-                        </el-button>
-                      </div>
-                    </el-card>
-                  </el-col>
-                </el-row>
-              </div>
-            </el-tab-pane>
-
             <!-- 关于系统 -->
             <el-tab-pane label="关于系统" name="about">
               <div class="settings-section">
@@ -223,11 +193,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Setting, Bell, Document, InfoFilled, Download, ShoppingCart } from '@element-plus/icons-vue'
+import { Setting, Bell, Document, InfoFilled, ShoppingCart } from '@element-plus/icons-vue'
 import settingsApi from '@/api/settings'
 
 const activeTab = ref('basic')
-const exportLoading = ref(false)
 
 // 系统设置数据
 const settings = ref({
@@ -256,7 +225,6 @@ const loadSettings = async () => {
       Object.assign(settings.value, response.data)
     }
   } catch (error) {
-    console.error('加载设置失败:', error)
     ElMessage.error('加载设置失败')
   }
 }
@@ -273,36 +241,7 @@ const handleSave = async () => {
       ElMessage.error(response.message || '保存失败')
     }
   } catch (error) {
-    console.error('保存设置失败:', error)
     ElMessage.error('保存失败')
-  }
-}
-
-// 导出商品数据
-const handleExportProducts = async () => {
-  try {
-    exportLoading.value = true
-    const response = await settingsApi.exportProducts()
-    
-    // 创建下载链接
-    const blob = new Blob([response], { 
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-    })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `商品信息_${new Date().getTime()}.xlsx`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-    
-    ElMessage.success('导出成功')
-  } catch (error) {
-    console.error('导出失败:', error)
-    ElMessage.error('导出失败')
-  } finally {
-    exportLoading.value = false
   }
 }
 
@@ -393,35 +332,6 @@ onMounted(() => {
           color: #606266;
           font-size: 14px;
         }
-      }
-    }
-  }
-  
-  .data-card {
-    text-align: center;
-    padding: 20px;
-    cursor: pointer;
-    transition: all 0.3s;
-    
-    &:hover {
-      transform: translateY(-5px);
-    }
-    
-    .data-card-icon {
-      margin-bottom: 15px;
-    }
-    
-    .data-card-content {
-      h4 {
-        margin: 10px 0;
-        font-size: 16px;
-        color: #303133;
-      }
-      
-      p {
-        color: #909399;
-        font-size: 14px;
-        margin: 10px 0;
       }
     }
   }

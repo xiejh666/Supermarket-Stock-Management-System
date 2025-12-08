@@ -46,6 +46,11 @@ public interface SysUserService extends IService<SysUser> {
      * 获取用户状态
      */
     UserStatusVO getUserStatus(Long id);
+    
+    /**
+     * 更新用户头像
+     */
+    void updateAvatar(Long userId, String avatarUrl);
 }
 
 

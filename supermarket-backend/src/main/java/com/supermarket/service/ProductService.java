@@ -19,22 +19,22 @@ public interface ProductService extends IService<Product> {
     /**
      * 创建商品
      */
-    void createProduct(ProductDTO dto);
+    void createProduct(ProductDTO dto, Long operatorId);
 
     /**
      * 更新商品
      */
-    void updateProduct(ProductDTO dto);
+    void updateProduct(ProductDTO dto, Long operatorId);
 
     /**
      * 删除商品
      */
-    void deleteProduct(Long id);
+    void deleteProduct(Long id, Long operatorId);
 
     /**
      * 修改商品状态
      */
-    void updateProductStatus(Long id, Integer status);
+    void updateProductStatus(Long id, Integer status, Long operatorId);
 }
 
 

@@ -17,10 +17,16 @@
       <!-- 搜索栏 -->
       <el-form :inline="true" :model="searchForm" class="search-form">
         <el-form-item label="订单号">
-          <el-input v-model="searchForm.orderNo" placeholder="请输入订单号" clearable @keyup.enter="handleSearch" />
+          <el-input v-model="searchForm.orderNo" placeholder="请输入订单号" clearable @keyup.enter="handleSearch" style="width: 200px;" />
         </el-form-item>
         <el-form-item label="客户名称">
-          <el-input v-model="searchForm.customerName" placeholder="请输入客户名称" clearable @keyup.enter="handleSearch" />
+          <el-input v-model="searchForm.customerName" placeholder="请输入客户名称" clearable @keyup.enter="handleSearch" style="width: 180px;" />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="searchForm.status" placeholder="全部" clearable style="width: 120px;">
+            <el-option label="待支付" :value="0" />
+            <el-option label="已完成" :value="1" />
+          </el-select>
         </el-form-item>
         <el-form-item label="销售日期">
           <el-date-picker
@@ -30,6 +36,7 @@
             start-placeholder="开始日期"
             end-placeholder="结束日期"
             value-format="YYYY-MM-DD"
+            style="width: 260px;"
             @change="handleSearch"
           />
         </el-form-item>
@@ -263,6 +270,7 @@ const total = ref(0)
 const searchForm = ref({
   orderNo: '',
   customerName: '',
+  status: null,
   dateRange: []
 })
 
@@ -318,6 +326,11 @@ const loadData = async () => {
       customerName: searchForm.value.customerName
     }
     
+    // 添加状态筛选
+    if (searchForm.value.status !== null && searchForm.value.status !== undefined && searchForm.value.status !== '') {
+      params.status = searchForm.value.status
+    }
+    
     if (searchForm.value.dateRange && searchForm.value.dateRange.length === 2) {
         params.startDate = searchForm.value.dateRange[0]
         params.endDate = searchForm.value.dateRange[1]
@@ -340,6 +353,7 @@ const handleReset = () => {
   searchForm.value = {
     orderNo: '',
     customerName: '',
+    status: null,
     dateRange: []
   }
   handleSearch()

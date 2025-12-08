@@ -26,6 +26,9 @@ public class UserProfileDTO {
     @ApiModelProperty("邮箱")
     private String email;
     
+    @ApiModelProperty("用户头像URL")
+    private String avatar;
+    
     @ApiModelProperty("角色名称")
     private String roleName;
     

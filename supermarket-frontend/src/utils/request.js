@@ -31,7 +31,6 @@ service.interceptors.request.use(
           return Promise.reject(new Error('用户状态异常'))
         }
       } catch (error) {
-        console.error('用户状态检查失败:', error)
         // 如果检查失败，继续执行请求（避免影响正常业务）
       }
     }
@@ -42,7 +41,6 @@ service.interceptors.request.use(
     return config
   },
   error => {
-    console.error('请求错误:', error)
     return Promise.reject(error)
   }
 )
@@ -61,6 +59,11 @@ function isAuthRelatedRequest(config) {
 // 响应拦截器
 service.interceptors.response.use(
   response => {
+    // 如果是文件下载（blob类型），直接返回
+    if (response.config.responseType === 'blob') {
+      return response.data
+    }
+    
     const res = response.data
     
     if (res.code !== 200) {
@@ -78,8 +81,64 @@ service.interceptors.response.use(
     return res
   },
   error => {
-    console.error('响应错误:', error)
-    ElMessage.error(error.message || '请求失败')
+    // 如果是401错误，跳转登录页
+    if (error.response && error.response.status === 401) {
+      removeToken()
+      ElMessage.warning('登录已过期，请重新登录')
+      router.push('/login')
+      return Promise.reject(error)
+    }
+    
+    // 根据响应状态码提供更详细的错误提示
+    let errorMessage = '请求失败'
+    
+    if (error.response) {
+      const status = error.response.status
+      const data = error.response.data
+      
+      // 优先使用后端返回的错误信息
+      if (data && data.message) {
+        errorMessage = data.message
+      } else {
+        // 根据状态码提供默认提示
+        switch (status) {
+          case 400:
+            errorMessage = '请求参数错误'
+            break
+          case 403:
+            errorMessage = '没有权限访问该资源'
+            break
+          case 404:
+            errorMessage = '请求的资源不存在'
+            break
+          case 413:
+            errorMessage = '上传文件过大'
+            break
+          case 500:
+            errorMessage = '服务器内部错误'
+            break
+          case 502:
+            errorMessage = '网关错误'
+            break
+          case 503:
+            errorMessage = '服务不可用'
+            break
+          case 504:
+            errorMessage = '网关超时'
+            break
+          default:
+            errorMessage = `请求失败（错误码: ${status}）`
+        }
+      }
+    } else if (error.request) {
+      // 请求已发送但没有收到响应
+      errorMessage = '网络连接失败，请检查网络'
+    } else {
+      // 请求配置错误
+      errorMessage = error.message || '请求失败'
+    }
+    
+    ElMessage.error(errorMessage)
     return Promise.reject(error)
   }
 )

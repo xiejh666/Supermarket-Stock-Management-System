@@ -189,7 +189,30 @@
     </el-row>
 
     <!-- 更换头像对话框 -->
-    <el-dialog v-model="showAvatarDialog" title="更换头像" width="500px">
+    <el-dialog v-model="showAvatarDialog" title="更换头像" width="600px">
+      <div class="avatar-upload-section">
+        <h4 style="margin-bottom: 16px; color: #606266;">上传自定义头像</h4>
+        <el-upload
+          class="avatar-uploader"
+          :action="uploadUrl"
+          :headers="uploadHeaders"
+          :show-file-list="false"
+          :on-success="handleAvatarSuccess"
+          :on-error="handleAvatarError"
+          :before-upload="beforeAvatarUpload"
+          accept="image/*"
+        >
+          <img v-if="avatarUrl && !avatarList.includes(avatarUrl)" :src="avatarUrl" class="avatar-preview" />
+          <div v-else class="avatar-uploader-icon">
+            <el-icon><Plus /></el-icon>
+            <div class="upload-text">点击上传头像</div>
+          </div>
+        </el-upload>
+        <div class="upload-tip">支持jpg、png格式，大小不超过2MB</div>
+      </div>
+      
+      <el-divider>或选择默认头像</el-divider>
+      
       <div class="avatar-options">
         <div
           v-for="(avatar, index) in avatarList"
@@ -203,7 +226,7 @@
       </div>
       <template #footer>
         <el-button @click="showAvatarDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleSaveAvatar">确定</el-button>
+        <el-button type="primary" @click="handleSaveAvatar" :loading="uploadLoading">确定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -213,6 +236,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/store/user'
 import { ElMessage } from 'element-plus'
+import { getToken } from '@/utils/auth'
 import {
   User,
   UserFilled,
@@ -220,9 +244,10 @@ import {
   Message,
   Lock,
   Avatar,
-  CircleCheck
+  CircleCheck,
+  Plus
 } from '@element-plus/icons-vue'
-import { getUserProfile, updateProfile, changePassword } from '@/api/profile'
+import { getUserProfile, updateProfile, changePassword, updateAvatar } from '@/api/profile'
 
 const userStore = useUserStore()
 const activeTab = ref('basic')
@@ -231,6 +256,13 @@ const passwordFormRef = ref(null)
 const saving = ref(false)
 const changingPassword = ref(false)
 const showAvatarDialog = ref(false)
+const uploadLoading = ref(false)
+
+// 文件上传配置
+const uploadUrl = ref('/api/upload/avatar')
+const uploadHeaders = computed(() => ({
+  'Authorization': `Bearer ${getToken()}`
+}))
 
 // 头像列表
 const avatarList = ref([
@@ -316,10 +348,59 @@ const selectAvatar = (avatar) => {
   avatarUrl.value = avatar
 }
 
+// 上传前验证
+const beforeAvatarUpload = (file) => {
+  const isImage = file.type.startsWith('image/')
+  const isLt2M = file.size / 1024 / 1024 < 2
+
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件!')
+    return false
+  }
+  if (!isLt2M) {
+    ElMessage.error('图片大小不能超过 2MB!')
+    return false
+  }
+  uploadLoading.value = true
+  return true
+}
+
+// 上传成功
+const handleAvatarSuccess = (response) => {
+  uploadLoading.value = false
+  if (response.code === 200) {
+    avatarUrl.value = response.data
+    ElMessage.success('头像上传成功')
+  } else {
+    ElMessage.error(response.message || '头像上传失败')
+  }
+}
+
+// 上传失败
+const handleAvatarError = () => {
+  uploadLoading.value = false
+  ElMessage.error('头像上传失败，请重试')
+}
+
 // 保存头像
-const handleSaveAvatar = () => {
-  showAvatarDialog.value = false
-  ElMessage.success('头像更新成功')
+const handleSaveAvatar = async () => {
+  try {
+    uploadLoading.value = true
+    const res = await updateAvatar(avatarUrl.value)
+    if (res.code === 200) {
+      // 更新 store 中的头像
+      userStore.updateAvatar(avatarUrl.value)
+      showAvatarDialog.value = false
+      ElMessage.success('头像更新成功')
+    } else {
+      ElMessage.error(res.message || '头像更新失败')
+    }
+  } catch (error) {
+    console.error('头像更新失败:', error)
+    ElMessage.error('头像更新失败')
+  } finally {
+    uploadLoading.value = false
+  }
 }
 
 // 获取用户信息
@@ -336,6 +417,10 @@ const fetchUserProfile = async () => {
         roleName: res.data.roleName || '',
         roleCode: res.data.roleCode || '',
         status: res.data.status
+      }
+      // 设置头像
+      if (res.data.avatar) {
+        avatarUrl.value = res.data.avatar
       }
       // 保存原始数据
       originalForm.value = { ...form.value }
@@ -558,6 +643,60 @@ onMounted(() => {
   .security-desc {
     font-size: 13px;
     color: #909399;
+  }
+}
+
+// 头像上传样式
+.avatar-upload-section {
+  .avatar-uploader {
+    :deep(.el-upload) {
+      border: 2px dashed #d9d9d9;
+      border-radius: 8px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+      width: 178px;
+      height: 178px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #fafafa;
+
+      &:hover {
+        border-color: #409eff;
+        background-color: #f0f7ff;
+      }
+    }
+
+    .avatar-preview {
+      width: 178px;
+      height: 178px;
+      display: block;
+      object-fit: cover;
+    }
+
+    .avatar-uploader-icon {
+      text-align: center;
+      
+      .el-icon {
+        font-size: 32px;
+        color: #8c939d;
+        margin-bottom: 8px;
+      }
+
+      .upload-text {
+        font-size: 14px;
+        color: #606266;
+        margin-top: 8px;
+      }
+    }
+  }
+
+  .upload-tip {
+    font-size: 12px;
+    color: #909399;
+    margin-top: 8px;
   }
 }
 

@@ -1,13 +1,18 @@
-spring:
+﻿spring:
   application:
     name: supermarket-backend
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/supermarket_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://8.136.43.180:3306/supermarket_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
     username: root
     password: root
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
   redis:
-    host: localhost
+    host: 8.136.43.180
     port: 6379
     password: ""
     database: 0
@@ -65,3 +70,11 @@ logging:
 jwt:
   secret: supermarket-secret-key-for-jwt-token-generation-2024-with-extra-length-to-meet-hs512-requirements
   expiration: 900000
+
+# 阿里云OSS配置
+oss:
+  endpoint: oss-cn-hangzhou.aliyuncs.com
+  access-key-id: LTAI5tL3mDXQjcBWs9qTGWoz
+  access-key-secret: bHIOOmCsuCEe6ixyb65HrZmFTtUpkk
+  bucket-name: supermarket-system
+  url-prefix: https://supermarket-system.oss-cn-hangzhou.aliyuncs.com/

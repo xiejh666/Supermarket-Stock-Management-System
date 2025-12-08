@@ -52,22 +52,28 @@ public class CategoryController {
 
     @PostMapping
     @ApiOperation("创建分类")
-    public Result<Void> createCategory(@Valid @RequestBody CategoryDTO dto) {
-        categoryService.createCategory(dto);
+    public Result<Void> createCategory(
+            @Valid @RequestBody CategoryDTO dto,
+            @ApiParam("操作人ID") @RequestParam Long operatorId) {
+        categoryService.createCategory(dto, operatorId);
         return Result.success();
     }
 
     @PutMapping
     @ApiOperation("更新分类")
-    public Result<Void> updateCategory(@Valid @RequestBody CategoryDTO dto) {
-        categoryService.updateCategory(dto);
+    public Result<Void> updateCategory(
+            @Valid @RequestBody CategoryDTO dto,
+            @ApiParam("操作人ID") @RequestParam Long operatorId) {
+        categoryService.updateCategory(dto, operatorId);
         return Result.success();
     }
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除分类")
-    public Result<Void> deleteCategory(@PathVariable Long id) {
-        categoryService.deleteCategory(id);
+    public Result<Void> deleteCategory(
+            @PathVariable Long id,
+            @ApiParam("操作人ID") @RequestParam Long operatorId) {
+        categoryService.deleteCategory(id, operatorId);
         return Result.success();
     }
 }

@@ -97,60 +97,115 @@
       </el-col>
     </el-row>
 
-    <!-- 最新动态 -->
+    <!-- 最新动态 - 全宽显示 -->
     <el-row :gutter="24">
-      <el-col :xs="24" :sm="24" :md="12">
-        <div class="info-panel">
-          <!-- 最新动态 -->
-          <el-card class="activity-card" shadow="hover">
-            <template #header>
-              <div class="card-header">
+      <el-col :span="24">
+        <div class="card chart-card activity-panel fade-in-up delay-6">
+          <div class="chart-header activity-header">
+            <div class="header-left">
+              <h3 class="chart-title">
                 <el-icon><Bell /></el-icon>
-                <span>最新动态</span>
-              </div>
-            </template>
-            <div class="activity-list">
-              <div 
-                v-for="(activity, index) in activities" 
-                :key="`${activity.id}-${index}`" 
-                class="activity-item"
-                :class="`activity-${activity.type}`"
+                最新动态
+              </h3>
+              <span class="activity-count">
+                共 {{ activities.length }} 条动态
+                <span v-if="activities.length > 0" style="color: #9ca3af; margin-left: 8px;">
+                  (第 {{ (activityPagination.current - 1) * activityPagination.size + 1 }}-{{ Math.min(activityPagination.current * activityPagination.size, activities.length) }} 条)
+                </span>
+              </span>
+            </div>
+            <div class="header-right">
+              <el-radio-group v-model="activityType" size="small" @change="fetchActivities">
+                <el-radio-button label="all">全部</el-radio-button>
+                <el-radio-button label="purchase">采购</el-radio-button>
+                <el-radio-button label="sale">销售</el-radio-button>
+                <el-radio-button label="inventory">库存</el-radio-button>
+              </el-radio-group>
+              <el-button 
+                :icon="Refresh" 
+                size="small" 
+                @click="fetchActivities"
+                :loading="activityLoading"
+                style="margin-left: 12px;"
               >
-                <div class="activity-icon">
-                  <el-icon :class="`icon-${activity.type}`">
-                    <component :is="getActivityIcon(activity.type)" />
+                刷新
+              </el-button>
+            </div>
+          </div>
+          
+          <div class="activity-list-container" v-loading="activityLoading">
+            <div class="activity-grid">
+              <div 
+                v-for="(activity, index) in paginatedActivities" 
+                :key="activity.id" 
+                class="activity-card-item"
+                :class="[`activity-type-${activity.type}`, `activity-icon-${activity.icon}`]"
+                @click="handleActivityClick(activity)"
+              >
+                <div class="activity-card-icon">
+                  <el-icon>
+                    <component :is="getActivityIconComponent(activity.icon)" />
                   </el-icon>
                 </div>
-                <div class="activity-content">
-                  <div class="activity-text">
-                    <span class="activity-title">{{ activity.title }}</span>
-                    <span class="activity-desc">{{ activity.content }}</span>
-                  </div>
-                  <div class="activity-meta">
-                    <span class="activity-time">{{ activity.time }}</span>
-                    <span v-if="activity.badge" class="activity-badge" :class="`badge-${activity.type}`">
+                <div class="activity-card-content">
+                  <div class="activity-card-header">
+                    <span class="activity-card-title">{{ activity.title }}</span>
+                    <el-tag 
+                      :type="getActivityTagType(activity.icon)" 
+                      size="small"
+                      effect="plain"
+                    >
                       {{ activity.badge }}
+                    </el-tag>
+                  </div>
+                  <div class="activity-card-desc">{{ activity.content }}</div>
+                  <div class="activity-card-footer">
+                    <span class="activity-card-time">
+                      <el-icon><Clock /></el-icon>
+                      {{ activity.time }}
+                    </span>
+                    <span class="activity-card-action">
+                      点击查看详情
+                      <el-icon><ArrowRight /></el-icon>
                     </span>
                   </div>
                 </div>
               </div>
-              <div v-if="activities.length === 0" class="activity-empty">
-                <el-icon class="empty-icon"><InfoFilled /></el-icon>
-                <span>暂无最新动态</span>
-              </div>
             </div>
-          </el-card>
+            
+            <div v-if="activities.length === 0" class="activity-empty-state">
+              <el-icon class="empty-icon"><InfoFilled /></el-icon>
+              <p class="empty-text">暂无最新动态</p>
+              <p class="empty-desc">系统会实时展示采购、销售、库存等业务动态</p>
+            </div>
+            
+            <!-- 分页 -->
+            <div v-if="activities.length > 0" class="activity-pagination">
+              <el-pagination
+                v-model:current-page="activityPagination.current"
+                v-model:page-size="activityPagination.size"
+                :total="activities.length"
+                :page-sizes="[6, 12, 18, 24]"
+                layout="total, sizes, prev, pager, next, jumper"
+                background
+                @size-change="handleActivityPageChange"
+                @current-change="handleActivityPageChange"
+              />
+            </div>
+          </div>
         </div>
       </el-col>
-
     </el-row>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, reactive, onMounted, nextTick, onUnmounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import { getDashboardStatistics } from '@/api/statistics'
+import { getRecentActivities } from '@/api/activity'
+import { useUserStore } from '@/store/user'
 import { ElMessage } from 'element-plus'
 import {
   TrendCharts,
@@ -170,11 +225,26 @@ import {
   SuccessFilled,
   CircleCheck,
   CircleClose,
-  Clock
+  Clock,
+  ArrowRight,
+  DocumentChecked,
+  ShoppingTrolley,
+  Goods
 } from '@element-plus/icons-vue'
 
+const router = useRouter()
+const userStore = useUserStore()
 const loading = ref(false)
 const salesPeriod = ref('week')
+const activityType = ref('all')
+const activityLoading = ref(false)
+let activityTimer = null
+
+// 分页配置
+const activityPagination = reactive({
+  current: 1,
+  size: 6
+})
 
 // 统计数据
 const stats = ref([
@@ -222,6 +292,13 @@ let salesChart, categoryChart, inventoryChart, purchaseChart
 
 // 最新动态 - 初始化为空数组，从后端动态获取
 const activities = ref([])
+
+// 分页后的动态列表
+const paginatedActivities = computed(() => {
+  const start = (activityPagination.current - 1) * activityPagination.size
+  const end = start + activityPagination.size
+  return activities.value.slice(start, end)
+})
 
 // 统计数据
 const statisticsData = ref(null)
@@ -275,113 +352,91 @@ const getActivityIcon = (type) => {
 // 获取最新动态
 const fetchActivities = async () => {
   try {
-    // 从统计数据生成动态信息
-    const activityList = []
-    const now = Date.now()
+    activityLoading.value = true
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
     
-    if (statisticsData.value) {
-      const data = statisticsData.value
-      
-      // 销售动态
-      if (data.todaySales > 0) {
-        const changeText = data.todaySalesChange >= 0 ? '上升' : '下降'
-        activityList.push({
-          id: 'sales-today',
-          title: '销售业绩',
-          content: `今日销售额 ¥${data.todaySales.toFixed(2)}，较昨日${changeText} ${Math.abs(data.todaySalesChange || 0).toFixed(1)}%`,
-          time: formatRelativeTime(new Date(now - 5 * 60 * 1000)),
-          type: data.todaySalesChange >= 0 ? 'success' : 'warning',
-          badge: changeText
-        })
-      }
-      
-      // 库存预警动态
-      if (data.inventoryWarning && data.inventoryWarning.length > 0) {
-        const warningItems = data.inventoryWarning.filter(item => item.warningLevel > 0)
-        if (warningItems.length > 0) {
-          const criticalCount = warningItems.filter(item => item.warningLevel === 3).length
-          const warningCount = warningItems.filter(item => item.warningLevel === 2).length
-          
-          let warningText = ''
-          if (criticalCount > 0) {
-            warningText = `${criticalCount}个商品严重缺货`
-          } else if (warningCount > 0) {
-            warningText = `${warningCount}个商品库存偏低`
-          }
-          
-          activityList.push({
-            id: 'inventory-warning',
-            title: '库存预警',
-            content: `${warningText}，请及时补货`,
-            time: formatRelativeTime(new Date(now - 10 * 60 * 1000)),
-            type: criticalCount > 0 ? 'error' : 'warning',
-            badge: criticalCount > 0 ? '紧急' : '注意'
-          })
-        }
-      }
-      
-      // 采购订单动态
-      if (data.purchaseStatistics && data.purchaseStatistics.statusStatistics) {
-        const pendingOrders = data.purchaseStatistics.statusStatistics.find(s => s.statusValue === 0)
-        if (pendingOrders && pendingOrders.orderCount > 0) {
-          activityList.push({
-            id: 'purchase-pending',
-            title: '采购管理',
-            content: `有 ${pendingOrders.orderCount} 个采购订单待审核`,
-            time: formatRelativeTime(new Date(now - 15 * 60 * 1000)),
-            type: 'info',
-            badge: '待处理'
-          })
-        }
-      }
-      
-      // 月度业绩动态
-      if (data.monthSales > 0) {
-        const changeText = data.monthSalesChange >= 0 ? '增长' : '下降'
-        activityList.push({
-          id: 'sales-month',
-          title: '月度统计',
-          content: `本月销售额 ¥${data.monthSales.toFixed(2)}，较上月${changeText} ${Math.abs(data.monthSalesChange || 0).toFixed(1)}%`,
-          time: formatRelativeTime(new Date(now - 30 * 60 * 1000)),
-          type: data.monthSalesChange >= 0 ? 'success' : 'info',
-          badge: '月报'
-        })
-      }
-      
-      // 系统状态动态
-      activityList.push({
-        id: 'system-status',
-        title: '系统状态',
-        content: '数据同步完成，所有服务运行正常',
-        time: formatRelativeTime(new Date(now - 45 * 60 * 1000)),
-        type: 'success',
-        badge: '正常'
-      })
-    }
+    const { data } = await getRecentActivities({
+      userId,
+      type: activityType.value,
+      limit: 100 // 获取更多数据，前端分页
+    })
     
-    // 如果没有业务动态，添加默认信息
-    if (activityList.length === 0) {
-      activityList.push({
-        id: 'welcome',
-        title: '系统欢迎',
-        content: '欢迎使用超市管理系统',
-        time: '刚刚',
-        type: 'info',
-        badge: '欢迎'
-      })
-    }
-    
-    activities.value = activityList.slice(0, 6) // 最多显示6条
-    console.log('最新动态已更新:', activities.value.length, '条')
+    activities.value = data || []
+    // 重置到第一页
+    activityPagination.current = 1
+    console.log('获取最新动态成功:', activities.value.length, '条')
   } catch (error) {
     console.error('获取最新动态失败:', error)
-    activities.value = [{
-      id: 'error',
-      title: '系统提示',
-      content: '动态数据加载失败',
-      time: '刚刚',
-      type: 'error'
-    }]
+    activities.value = []
+  } finally {
+    activityLoading.value = false
+  }
+}
+
+// 处理分页变化
+const handleActivityPageChange = () => {
+  // 滚动到动态面板顶部
+  const activityPanel = document.querySelector('.activity-panel')
+  if (activityPanel) {
+    activityPanel.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+}
+
+// 获取活动图标组件
+const getActivityIconComponent = (iconType) => {
+  switch (iconType) {
+    case 'success': return SuccessFilled
+    case 'warning': return Warning
+    case 'info': return InfoFilled
+    case 'error': return CircleClose
+    default: return DocumentChecked
+  }
+}
+
+// 获取活动标签类型
+const getActivityTagType = (iconType) => {
+  switch (iconType) {
+    case 'success': return 'success'
+    case 'warning': return 'warning'
+    case 'info': return ''
+    case 'error': return 'danger'
+    default: return 'info'
+  }
+}
+
+// 处理活动点击
+const handleActivityClick = (activity) => {
+  console.log('点击活动:', activity)
+  
+  // 根据活动类型跳转到对应页面
+  switch (activity.type) {
+    case 'purchase':
+      router.push('/purchase')
+      break
+    case 'sale':
+      router.push('/sale')
+      break
+    case 'inventory':
+      router.push('/inventory')
+      break
+    default:
+      console.log('未知活动类型:', activity.type)
+  }
+}
+
+// 启动自动刷新
+const startActivityAutoRefresh = () => {
+  // 每30秒自动刷新一次
+  activityTimer = setInterval(() => {
+    fetchActivities()
+  }, 30000)
+}
+
+// 停止自动刷新
+const stopActivityAutoRefresh = () => {
+  if (activityTimer) {
+    clearInterval(activityTimer)
+    activityTimer = null
   }
 }
 
@@ -1010,16 +1065,19 @@ const handleResize = () => {
 }
 
 onMounted(async () => {
-  await fetchStatistics('week')
-  await fetchActivities()
-  
+  // 先初始化图表（使用默认配置）
   await nextTick()
-  
-  // 初始化所有图表
   initSalesChart()
   initCategoryChart()
   initInventoryChart()
   initPurchaseChart()
+  
+  // 然后获取真实数据并更新图表
+  await fetchStatistics('week')
+  await fetchActivities()
+  
+  // 启动自动刷新
+  startActivityAutoRefresh()
   
   // 监听窗口大小变化
   window.addEventListener('resize', handleResize)
@@ -1029,6 +1087,7 @@ onMounted(async () => {
 import { onBeforeUnmount } from 'vue'
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
+  stopActivityAutoRefresh()
   salesChart?.dispose()
   categoryChart?.dispose()
   inventoryChart?.dispose()
@@ -1257,20 +1316,251 @@ onBeforeUnmount(() => {
   color: #1e40af;
 }
 
-.activity-empty {
+/* 最新动态面板 */
+.activity-panel {
+  margin-top: 24px;
+}
+
+.activity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.activity-count {
+  font-size: 13px;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.activity-list-container {
+  min-height: 300px;
+}
+
+.activity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  padding: 20px 0;
+}
+
+.activity-card-item {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.activity-card-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #3b82f6;
+  transform: scaleY(0);
+  transition: transform 0.3s ease;
+}
+
+.activity-card-item:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  transform: translateY(-2px);
+}
+
+.activity-card-item:hover::before {
+  transform: scaleY(1);
+}
+
+.activity-type-purchase::before {
+  background: #8b5cf6;
+}
+
+.activity-type-sale::before {
+  background: #10b981;
+}
+
+.activity-type-inventory::before {
+  background: #f59e0b;
+}
+
+.activity-card-icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-size: 24px;
+  transition: all 0.3s ease;
+}
+
+.activity-icon-success .activity-card-icon {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #16a34a;
+}
+
+.activity-icon-warning .activity-card-icon {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #d97706;
+}
+
+.activity-icon-info .activity-card-icon {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #2563eb;
+}
+
+.activity-icon-error .activity-card-icon {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #dc2626;
+}
+
+.activity-card-item:hover .activity-card-icon {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.activity-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.activity-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.activity-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.4;
+}
+
+.activity-card-desc {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.6;
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.activity-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.activity-card-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #9ca3af;
+}
+
+.activity-card-time .el-icon {
+  font-size: 14px;
+}
+
+.activity-card-action {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #3b82f6;
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.activity-card-item:hover .activity-card-action {
+  opacity: 1;
+}
+
+.activity-card-action .el-icon {
+  font-size: 14px;
+}
+
+.activity-empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
-  color: #9ca3af;
-  font-size: 14px;
+  padding: 60px 20px;
+  text-align: center;
 }
 
-.empty-icon {
-  font-size: 24px;
-  margin-bottom: 8px;
+.activity-empty-state .empty-icon {
+  font-size: 48px;
   color: #d1d5db;
+  margin-bottom: 16px;
+}
+
+.activity-empty-state .empty-text {
+  font-size: 16px;
+  font-weight: 500;
+  color: #6b7280;
+  margin: 0 0 8px 0;
+}
+
+.activity-empty-state .empty-desc {
+  font-size: 13px;
+  color: #9ca3af;
+  margin: 0;
+}
+
+/* 分页器样式 */
+.activity-pagination {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0 12px 0;
+  border-top: 1px solid #f3f4f6;
+  margin-top: 20px;
+}
+
+.activity-pagination :deep(.el-pagination) {
+  gap: 8px;
+}
+
+.activity-pagination :deep(.el-pagination.is-background .btn-prev),
+.activity-pagination :deep(.el-pagination.is-background .btn-next),
+.activity-pagination :deep(.el-pagination.is-background .el-pager li) {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.activity-pagination :deep(.el-pagination.is-background .el-pager li:not(.is-disabled).is-active) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 

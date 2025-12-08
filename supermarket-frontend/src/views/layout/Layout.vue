@@ -98,8 +98,10 @@
             <div class="user-info">
               <el-avatar
                 :size="40"
-                src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png"
-              />
+                :src="userInfo.avatar || 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'"
+              >
+                <el-icon><User /></el-icon>
+              </el-avatar>
               <div class="user-details" v-if="!isCollapsed">
                 <div class="user-name">{{ userInfo.realName || userInfo.username }}</div>
                 <div class="user-role">{{ userInfo.roleName }}</div>

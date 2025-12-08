@@ -171,6 +171,18 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
                 .statusDesc(statusDesc)
                 .build();
     }
+    
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateAvatar(Long userId, String avatarUrl) {
+        SysUser user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+        
+        user.setAvatar(avatarUrl);
+        userMapper.updateById(user);
+    }
 }
 
 

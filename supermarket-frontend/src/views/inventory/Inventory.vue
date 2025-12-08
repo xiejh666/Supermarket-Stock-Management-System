@@ -6,6 +6,8 @@
           <h2>📊 库存管理</h2>
           <p class="subtitle">实时查看商品库存信息</p>
         </div>
+      </div>
+      <div class="header-actions">
         <el-button type="warning" @click="handleRefresh">
           <el-icon><Refresh /></el-icon>
           刷新库存
@@ -65,6 +67,7 @@
             placeholder="请输入商品名称"
             clearable
             @clear="loadData"
+            style="width: 200px;"
           />
         </el-form-item>
         <el-form-item label="分类">
@@ -73,6 +76,7 @@
             placeholder="请选择分类"
             clearable
             @clear="loadData"
+            style="width: 180px;"
           >
             <el-option
               v-for="category in categoryList"
@@ -80,6 +84,19 @@
               :label="category.categoryName"
               :value="category.id"
             />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="库存状态">
+          <el-select
+            v-model="searchForm.stockStatus"
+            placeholder="全部"
+            clearable
+            @clear="loadData"
+            style="width: 140px;"
+          >
+            <el-option label="库存正常" value="normal" />
+            <el-option label="库存不足" value="low" />
+            <el-option label="无库存" value="empty" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -284,7 +301,8 @@ const total = ref(0)
 
 const searchForm = ref({
   productName: '',
-  categoryId: null
+  categoryId: null,
+  stockStatus: null
 })
 
 const adjustDialogVisible = ref(false)
@@ -320,13 +338,32 @@ const totalStock = computed(() => {
 
 const loadData = async () => {
   try {
-    const { data } = await inventoryApi.getList({
+    const params = {
       current: pageNum.value,
       size: pageSize.value,
-      ...searchForm.value
-    })
-    inventoryList.value = data.records
-    total.value = data.total
+      productName: searchForm.value.productName,
+      categoryId: searchForm.value.categoryId
+    }
+    
+    const { data } = await inventoryApi.getList(params)
+    let list = data.records
+    
+    // 前端按库存状态筛选
+    if (searchForm.value.stockStatus) {
+      list = list.filter(item => {
+        if (searchForm.value.stockStatus === 'normal') {
+          return item.stock > item.minStock // 库存正常：大于预警值
+        } else if (searchForm.value.stockStatus === 'low') {
+          return item.stock > 0 && item.stock <= item.minStock // 库存不足：0 < 库存 ≤ 预警值
+        } else if (searchForm.value.stockStatus === 'empty') {
+          return item.stock === 0 // 无库存：库存为0
+        }
+        return true
+      })
+    }
+    
+    inventoryList.value = list
+    total.value = list.length
   } catch (error) {
     ElMessage.error('加载数据失败')
   }
@@ -338,6 +375,16 @@ const handleSearch = () => {
 }
 
 const handleReset = () => {
+  searchForm.value = {
+    productName: '',
+    categoryId: null,
+    stockStatus: null
+  }
+  handleSearch()
+}
+
+// 兼容旧的重置方法
+const handleResetOld = () => {
   searchForm.value = {
     productName: '',
     categoryId: null
@@ -454,12 +501,9 @@ onMounted(() => {
 
   .page-header {
     margin-bottom: 20px;
+    position: relative;
 
     .header-content {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-
       .title-section {
         h2 {
           margin: 0 0 8px 0;
@@ -473,6 +517,13 @@ onMounted(() => {
           font-size: 14px;
         }
       }
+    }
+
+    .header-actions {
+      position: absolute;
+      top: 50%;
+      right: 20px;
+      transform: translateY(-50%);
     }
   }
 

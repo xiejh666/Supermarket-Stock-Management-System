@@ -1,5 +1,6 @@
 package com.supermarket.filter;
 
+import com.supermarket.service.TokenBlacklistService;
 import com.supermarket.utils.JwtUtils;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ import java.util.Collections;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, 
@@ -35,22 +37,33 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = getTokenFromRequest(request);
         
         // 验证 Token
-        if (StringUtils.hasText(token) && jwtUtils.validateToken(token)) {
-            // 解析 Token
-            Claims claims = jwtUtils.getClaimsFromToken(token);
-            String username = claims.get("username", String.class);
-            String roleCode = claims.get("roleCode", String.class);
+        if (StringUtils.hasText(token)) {
+            // ===== 检查 Token 是否在黑名单中 =====
+            if (tokenBlacklistService.isBlacklisted(token)) {
+                System.out.println("🚫 Token 在黑名单中，拒绝访问");
+                // Token 已失效，不设置认证信息，继续过滤链（会被拦截）
+                filterChain.doFilter(request, response);
+                return;
+            }
             
-            // 创建认证对象
-            UsernamePasswordAuthenticationToken authentication = 
-                new UsernamePasswordAuthenticationToken(
-                    username,
-                    null,
-                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + roleCode))
-                );
-            
-            // 设置到 Spring Security 上下文
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            // 验证 Token 有效性
+            if (jwtUtils.validateToken(token)) {
+                // 解析 Token
+                Claims claims = jwtUtils.getClaimsFromToken(token);
+                String username = claims.get("username", String.class);
+                String roleCode = claims.get("roleCode", String.class);
+                
+                // 创建认证对象
+                UsernamePasswordAuthenticationToken authentication = 
+                    new UsernamePasswordAuthenticationToken(
+                        username,
+                        null,
+                        Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + roleCode))
+                    );
+                
+                // 设置到 Spring Security 上下文
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
         }
         
         // 继续过滤链

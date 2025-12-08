@@ -21,6 +21,7 @@ public class SysUser {
     private String realName;
     private String phone;
     private String email;
+    private String avatar;  // 用户头像URL
     private Integer status;
     private Long roleId;
     private LocalDateTime createTime;

@@ -37,11 +37,25 @@ export function changePassword(data) {
   })
 }
 
+/**
+ * 更新用户头像
+ * @param {string} avatarUrl 头像URL
+ * @returns {Promise}
+ */
+export function updateAvatar(avatarUrl) {
+  return request({
+    url: '/user/profile/avatar',
+    method: 'put',
+    params: { avatarUrl }
+  })
+}
+
 // 默认导出
 export default {
   getUserProfile,
   updateProfile,
-  changePassword
+  changePassword,
+  updateAvatar
 }
 
 

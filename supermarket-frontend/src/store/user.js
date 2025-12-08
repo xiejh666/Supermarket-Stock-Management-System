@@ -47,6 +47,13 @@ export const useUserStore = defineStore('user', {
       saveUserInfoToStorage(userInfo)
     },
     
+    updateAvatar(avatarUrl) {
+      if (this.userInfo) {
+        this.userInfo.avatar = avatarUrl
+        saveUserInfoToStorage(this.userInfo)
+      }
+    },
+    
     logout() {
       this.token = ''
       this.userInfo = null
