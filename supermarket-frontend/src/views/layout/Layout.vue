@@ -346,16 +346,22 @@ const fetchMessages = async () => {
       console.warn('用户ID不存在，无法获取通知')
       return
     }
+    console.log('正在获取消息列表，用户ID:', userId)
     const res = await getNotifications({
       userId,
       current: 1,
       size: 50
     })
+    console.log('消息列表响应:', res)
     if (res.code === 200) {
       notifications.value = res.data.records || []
+    } else {
+      console.error('获取消息列表失败，响应码:', res.code, '消息:', res.message)
     }
   } catch (error) {
-    console.error('获取消息列表失败:', error)
+    console.error('获取消息列表异常:', error)
+    console.error('错误详情:', error.response?.data || error.message)
+    // 不要显示错误提示，避免影响用户体验
   }
 }
 
@@ -425,12 +431,12 @@ const markAsReadHandler = async (notification) => {
     },
     'PURCHASE_ORDER': {
       path: '/purchase',
-      query: { orderNo: notification.businessId }, // 使用businessId
+      query: { orderNo: notification.relatedCode || notification.businessId }, // 使用relatedCode（订单号）
       message: '已跳转到采购管理页面'
     },
     'SALE_ORDER': {
       path: '/sale',
-      query: { orderNo: notification.businessId }, // 使用businessId
+      query: { orderNo: notification.relatedCode || notification.businessId }, // 使用relatedCode（订单号）
       message: '已跳转到销售管理页面'
     },
     'INVENTORY': {

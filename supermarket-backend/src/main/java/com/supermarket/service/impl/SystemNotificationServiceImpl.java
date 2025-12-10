@@ -73,6 +73,7 @@ public class SystemNotificationServiceImpl extends ServiceImpl<SystemNotificatio
             notification.setSenderId(applicantId);
             notification.setBusinessId(purchaseOrderId);
             notification.setBusinessType("PURCHASE_ORDER");
+            notification.setRelatedCode(purchaseOrder.getOrderNo()); // 设置订单号
             notification.setIsRead(0);
             notification.setPriority(3); // 高优先级
 
@@ -127,6 +128,7 @@ public class SystemNotificationServiceImpl extends ServiceImpl<SystemNotificatio
         notification.setSenderId(auditorId);
         notification.setBusinessId(purchaseOrderId);
         notification.setBusinessType("PURCHASE_ORDER");
+        notification.setRelatedCode(purchaseOrder.getOrderNo()); // 设置订单号
         notification.setIsRead(0);
         notification.setPriority(auditStatus == 1 ? 2 : 3); // 通过为中等优先级，拒绝为高优先级
 
@@ -165,6 +167,7 @@ public class SystemNotificationServiceImpl extends ServiceImpl<SystemNotificatio
             notification.setSenderId(cashierId);
             notification.setBusinessId(saleOrderId);
             notification.setBusinessType("SALE_ORDER");
+            notification.setRelatedCode(saleOrder.getOrderNo()); // 设置订单号
             notification.setIsRead(0);
             notification.setPriority(2); // 中优先级
 

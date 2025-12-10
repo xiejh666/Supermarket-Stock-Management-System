@@ -97,7 +97,7 @@ public class BusinessOperationNotificationServiceImpl implements BusinessOperati
         String title = getPurchaseOperationTitle(operation, auditResult);
         String content = getPurchaseOperationContent(operatorRole, operatorName, operation, orderNo, amount, auditResult);
         
-        notifyByRole(operatorRole, operatorId, title, content, "PURCHASE_OPERATION", orderId, "PURCHASE_ORDER");
+        notifyByRole(operatorRole, operatorId, title, content, "PURCHASE_OPERATION", orderId, "PURCHASE_ORDER", orderNo);
     }
 
     @Override
@@ -109,7 +109,7 @@ public class BusinessOperationNotificationServiceImpl implements BusinessOperati
         String content = String.format("%s %s %s了销售订单：%s，金额：¥%.2f", 
                 getRoleDisplayName(operatorRole), operatorName, getOperationDisplayName(operation), orderNo, amount);
         
-        notifyByRole(operatorRole, operatorId, title, content, "SALE_OPERATION", orderId, "SALE_ORDER");
+        notifyByRole(operatorRole, operatorId, title, content, "SALE_OPERATION", orderId, "SALE_ORDER", orderNo);
     }
 
     /**

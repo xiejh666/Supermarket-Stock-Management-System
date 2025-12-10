@@ -328,7 +328,13 @@ const applyFilter = () => {
     })
   }
   
-  displayPurchaseList.value = list
+  // 更新总数为筛选后的数据量
+  total.value = list.length
+  
+  // 前端分页：只显示当前页的数据
+  const startIndex = (pageNum.value - 1) * pageSize.value
+  const endIndex = startIndex + pageSize.value
+  displayPurchaseList.value = list.slice(startIndex, endIndex)
 }
 
 const userStore = useUserStore()
@@ -366,6 +372,7 @@ const totalAmount = computed(() => {
 
 // 查询
 const handleSearch = () => {
+  pageNum.value = 1  // 重置到第一页
   applyFilter()
 }
 
@@ -382,8 +389,11 @@ const handleReset = () => {
     router.replace({ path: route.path, query: {} })
   }
   
-  // 重置后显示所有数据
-  displayPurchaseList.value = purchaseList.value
+  // 重置页码到第一页
+  pageNum.value = 1
+  
+  // 重置后重新应用筛选（此时无筛选条件，显示所有数据）
+  applyFilter()
 }
 
 const getStatusType = (status) => {
@@ -408,15 +418,14 @@ const getStatusText = (status) => {
 
 const loadData = async () => {
   try {
+    // 加载所有数据，不分页（前端筛选需要所有数据）
     const { data } = await purchaseApi.getList({
-      current: pageNum.value,
-      size: pageSize.value
+      current: 1,
+      size: 10000 // 获取所有数据
     })
     purchaseList.value = data.records
     total.value = data.total
-    // 初始化显示列表
-    displayPurchaseList.value = data.records
-    // 加载完数据后应用筛选条件
+    // 加载完数据后应用筛选条件（会自动分页）
     applyFilter()
   } catch (error) {
     ElMessage.error('加载数据失败')
@@ -424,7 +433,8 @@ const loadData = async () => {
 }
 
 const handlePageChange = () => {
-  loadData()
+  // 翻页时重新应用筛选，显示当前页的数据
+  applyFilter()
 }
 
 const loadSuppliers = async () => {
@@ -584,7 +594,7 @@ const handleDelete = async (row) => {
   }
 }
 
-// 应用路由筛选参数
+// 应用路由筛选条件
 const applyRouteFilter = () => {
   // 清除之前的筛选条件
   if (!route.query.filter && !route.query.orderNo) {
@@ -595,12 +605,17 @@ const applyRouteFilter = () => {
   // 应用待审核筛选
   if (route.query.filter === 'pending') {
     queryForm.status = 0 // 0 表示待审核
+    pageNum.value = 1 // 重置页码
   }
   
-  // 应用订单号筛选（从最新动态跳转）
+  // 应用订单号筛选（从消息通知跳转）
   if (route.query.orderNo) {
     queryForm.orderNo = route.query.orderNo
     queryForm.status = null // 清除状态筛选
+    queryForm.supplierName = '' // 清除供应商筛选
+    queryForm.createTimeRange = null // 清除时间筛选
+    queryForm.inboundTimeRange = null
+    pageNum.value = 1 // 重置页码
   }
 }
 

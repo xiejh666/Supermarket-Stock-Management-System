@@ -101,8 +101,10 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import categoryApi from '@/api/category'
 import { canCreate, canUpdate, canDelete, checkPermission } from '@/utils/permission'
+import { useUserStore } from '@/store/user'
 
 const route = useRoute()
+const userStore = useUserStore()
 
 const categoryList = ref([])
 const pageNum = ref(1)
@@ -177,11 +179,12 @@ const handleEdit = (row) => {
 const handleSubmit = async () => {
   await formRef.value.validate()
   try {
+    const currentUserId = userStore.userInfo?.userId || userStore.userInfo?.id
     if (form.value.id) {
-      await categoryApi.update(form.value)
+      await categoryApi.update(form.value, currentUserId)
       ElMessage.success('更新成功')
     } else {
-      await categoryApi.create(form.value)
+      await categoryApi.create(form.value, currentUserId)
       ElMessage.success('创建成功')
     }
     dialogVisible.value = false
@@ -197,7 +200,8 @@ const handleDelete = async (row) => {
     type: 'warning'
   })
   try {
-    await categoryApi.delete(row.id)
+    const currentUserId = userStore.userInfo?.userId || userStore.userInfo?.id
+    await categoryApi.delete(row.id, currentUserId)
     ElMessage.success('删除成功')
     loadData()
   } catch (error) {

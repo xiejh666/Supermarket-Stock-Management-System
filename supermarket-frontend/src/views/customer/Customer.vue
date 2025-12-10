@@ -37,7 +37,7 @@
 
     <el-card class="table-card">
       <el-table :data="customerList" stripe style="width: 100%">
-        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column type="index" label="序号" width="80" :index="indexMethod" />
         <el-table-column prop="customerName" label="客户名称" />
         <el-table-column prop="phone" label="手机号" width="150" />
         <el-table-column prop="address" label="地址" show-overflow-tooltip />
@@ -144,6 +144,7 @@ const rules = {
 
 const loadData = async () => {
   try {
+    console.log('加载客户数据 - 页码:', pageNum.value, '每页条数:', pageSize.value)
     const { data } = await customerApi.getList({
       current: pageNum.value,
       size: pageSize.value,
@@ -151,9 +152,12 @@ const loadData = async () => {
       phone: searchForm.value.phone,
       address: searchForm.value.address
     })
-    customerList.value = data.records
+    console.log('返回数据:', data)
+    // 确保每次都是新的数组，避免Vue的响应式缓存问题
+    customerList.value = [...data.records]
     total.value = data.total
   } catch (error) {
+    console.error('加载客户数据失败:', error)
     ElMessage.error('加载数据失败')
   }
 }
@@ -223,6 +227,11 @@ const handleDelete = async (row) => {
   } catch (error) {
     ElMessage.error('删除失败')
   }
+}
+
+// 计算序号
+const indexMethod = (index) => {
+  return (pageNum.value - 1) * pageSize.value + index + 1
 }
 
 // 应用路由参数

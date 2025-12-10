@@ -12,8 +12,8 @@ from decimal import Decimal
 import json
 
 # ==================== 配置 ====================
-START_DATE = datetime(2024, 7, 1)  # 开始日期：2024年7月1日
-END_DATE = datetime(2024, 11, 30)  # 结束日期：2024年11月30日（5个月）
+START_DATE = datetime(2025, 7, 1)  # 开始日期：2025年7月1日
+END_DATE = datetime(2025, 11, 30)  # 结束日期：2025年11月30日（5个月）
 OUTPUT_FILE = 'supermarket_真实数据_完整版.sql'
 
 # ==================== 基础数据 ====================

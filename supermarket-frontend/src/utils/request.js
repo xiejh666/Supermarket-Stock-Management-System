@@ -6,7 +6,7 @@ import userStatusChecker from '@/utils/userStatusCheck'
 
 const service = axios.create({
   baseURL: '/api',
-  timeout: 10000
+  timeout: 30000 // 增加到30秒，避免统计查询超时
 })
 
 // 请求拦截器

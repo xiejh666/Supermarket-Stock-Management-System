@@ -259,36 +259,51 @@ public class StatisticsServiceImpl implements StatisticsService {
         LocalDateTime startTime = getStartTimeByPeriod(period);
         LocalDateTime endTime = LocalDateTime.now();
 
-        // 获取时间范围内所有已完成的销售订单
-        List<SaleOrder> saleOrders = saleOrderMapper.selectList(
+        // 获取时间范围内所有已完成的销售订单ID（只查询ID，减少数据传输）
+        List<Long> orderIds = saleOrderMapper.selectList(
                 new LambdaQueryWrapper<SaleOrder>()
+                        .select(SaleOrder::getId)
                         .eq(SaleOrder::getStatus, 1) // 只统计已完成的订单
                         .between(SaleOrder::getCreateTime, startTime, endTime)
-        );
-
-        if (saleOrders.isEmpty()) {
-            return new ArrayList<>();
-        }
-
-        // 获取所有订单ID
-        List<Long> orderIds = saleOrders.stream()
+        ).stream()
                 .map(SaleOrder::getId)
                 .collect(Collectors.toList());
 
-        // 获取所有订单明细
-        List<SaleOrderItem> orderItems = saleOrderItemMapper.selectList(
-                new LambdaQueryWrapper<SaleOrderItem>()
-                        .in(SaleOrderItem::getOrderId, orderIds)
-        );
+        if (orderIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 批量获取所有商品信息，避免在循环中查询
+        List<Product> allProducts = productMapper.selectList(null);
+        Map<Long, Product> productMap = allProducts.stream()
+                .collect(Collectors.toMap(Product::getId, p -> p));
+
+        // 批量获取所有分类信息
+        List<Category> allCategories = categoryMapper.selectList(null);
+        Map<Long, String> categoryNameMap = allCategories.stream()
+                .collect(Collectors.toMap(Category::getId, Category::getCategoryName));
+
+        // 分批查询订单明细（避免IN子句过长）
+        List<SaleOrderItem> allOrderItems = new ArrayList<>();
+        int batchSize = 1000;
+        for (int i = 0; i < orderIds.size(); i += batchSize) {
+            int endIndex = Math.min(i + batchSize, orderIds.size());
+            List<Long> batchIds = orderIds.subList(i, endIndex);
+            
+            List<SaleOrderItem> batchItems = saleOrderItemMapper.selectList(
+                    new LambdaQueryWrapper<SaleOrderItem>()
+                            .in(SaleOrderItem::getOrderId, batchIds)
+            );
+            allOrderItems.addAll(batchItems);
+        }
 
         // 统计每个分类的销售额
         Map<Long, BigDecimal> categorySalesMap = new HashMap<>();
-        Map<Long, String> categoryNameMap = new HashMap<>();
         BigDecimal totalSales = BigDecimal.ZERO;
 
-        for (SaleOrderItem item : orderItems) {
-            // 获取商品信息
-            Product product = productMapper.selectById(item.getProductId());
+        for (SaleOrderItem item : allOrderItems) {
+            // 从缓存的Map中获取商品信息
+            Product product = productMap.get(item.getProductId());
             if (product != null && product.getCategoryId() != null) {
                 Long categoryId = product.getCategoryId();
                 
@@ -301,14 +316,6 @@ public class StatisticsServiceImpl implements StatisticsService {
                 categorySalesMap.put(categoryId, 
                         categorySalesMap.getOrDefault(categoryId, BigDecimal.ZERO).add(itemSales));
                 totalSales = totalSales.add(itemSales);
-                
-                // 保存分类名称
-                if (!categoryNameMap.containsKey(categoryId)) {
-                    Category category = categoryMapper.selectById(categoryId);
-                    if (category != null) {
-                        categoryNameMap.put(categoryId, category.getCategoryName());
-                    }
-                }
             }
         }
 
