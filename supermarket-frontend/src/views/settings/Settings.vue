@@ -25,7 +25,8 @@
                     <el-input 
                       v-model="settings.systemName" 
                       placeholder="请输入系统名称"
-                      style="max-width: 400px" 
+                      style="max-width: 400px"
+                      :disabled="!isAdmin"
                     />
                   </el-form-item>
                   <el-form-item label="系统版本">
@@ -38,12 +39,16 @@
                       placeholder="请输入系统描述"
                       :rows="3"
                       style="max-width: 400px"
+                      :disabled="!isAdmin"
                     />
                   </el-form-item>
-                  <el-form-item>
+                  <el-form-item v-if="isAdmin">
                     <el-button type="primary" @click="handleSave">保存设置</el-button>
                     <el-button @click="loadSettings">重置</el-button>
                   </el-form-item>
+                  <el-alert v-else type="info" :closable="false" style="max-width: 400px;">
+                    仅管理员可修改系统基本设置
+                  </el-alert>
                 </el-form>
               </div>
             </el-tab-pane>
@@ -61,7 +66,7 @@
                       </div>
                       <div class="notification-desc">当商品库存低于预警值时发送通知</div>
                     </div>
-                    <el-switch v-model="settings.inventoryWarning" />
+                    <el-switch v-model="settings.inventoryWarning" :disabled="!isAdmin" />
                   </div>
                   <div class="notification-item">
                     <div class="notification-info">
@@ -71,7 +76,7 @@
                       </div>
                       <div class="notification-desc">有新的采购订单待审核时发送通知</div>
                     </div>
-                    <el-switch v-model="settings.orderAudit" />
+                    <el-switch v-model="settings.orderAudit" :disabled="!isAdmin" />
                   </div>
                   <div class="notification-item">
                     <div class="notification-info">
@@ -81,13 +86,16 @@
                       </div>
                       <div class="notification-desc">系统发布重要公告时发送通知</div>
                     </div>
-                    <el-switch v-model="settings.systemNotice" />
+                    <el-switch v-model="settings.systemNotice" :disabled="!isAdmin" />
                   </div>
                 </div>
                 <el-form label-width="120px" style="margin-top: 20px;">
-                  <el-form-item>
+                  <el-form-item v-if="isAdmin">
                     <el-button type="primary" @click="handleSave">保存设置</el-button>
                   </el-form-item>
+                  <el-alert v-else type="info" :closable="false">
+                    仅管理员可修改通知设置
+                  </el-alert>
                 </el-form>
               </div>
             </el-tab-pane>
@@ -103,6 +111,7 @@
                       :min="30" 
                       :max="365"
                       style="width: 200px"
+                      :disabled="!isAdmin"
                     />
                     <span class="form-tip">天（建议90天）</span>
                   </el-form-item>
@@ -112,6 +121,7 @@
                       :min="3" 
                       :max="10"
                       style="width: 200px"
+                      :disabled="!isAdmin"
                     />
                     <span class="form-tip">次（建议5次）</span>
                   </el-form-item>
@@ -121,16 +131,20 @@
                       :min="10" 
                       :max="120"
                       style="width: 200px"
+                      :disabled="!isAdmin"
                     />
                     <span class="form-tip">分钟（建议30分钟）</span>
                   </el-form-item>
                   <el-form-item label="强密码策略">
-                    <el-switch v-model="settings.strongPassword" />
+                    <el-switch v-model="settings.strongPassword" :disabled="!isAdmin" />
                     <span class="form-tip">启用后密码必须包含大小写字母、数字和特殊字符</span>
                   </el-form-item>
-                  <el-form-item>
+                  <el-form-item v-if="isAdmin">
                     <el-button type="primary" @click="handleSave">保存设置</el-button>
                   </el-form-item>
+                  <el-alert v-else type="info" :closable="false" style="max-width: 500px;">
+                    仅管理员可修改安全设置
+                  </el-alert>
                 </el-form>
               </div>
             </el-tab-pane>
@@ -143,10 +157,10 @@
                   <div class="about-logo">
                     <el-icon :size="80" color="#409eff"><ShoppingCart /></el-icon>
                   </div>
-                  <h2>{{ settings.systemName || '超市进销存管理系统' }}</h2>
+                  <h2>{{ systemStore.systemName || '超市进销存管理系统' }}</h2>
                   <p class="version">版本：v1.0.0</p>
                   <p class="description">
-                    {{ settings.systemDescription || '专业的超市进销存管理解决方案，提供商品、采购、销售、库存全流程管理' }}
+                    {{ systemStore.systemDescription || '专业的超市进销存管理解决方案，提供商品、采购、销售、库存全流程管理' }}
                   </p>
                   
                   <el-divider />
@@ -191,12 +205,21 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Setting, Bell, Document, InfoFilled, ShoppingCart } from '@element-plus/icons-vue'
 import settingsApi from '@/api/settings'
+import { useUserStore } from '@/store/user'
+import { useSystemStore } from '@/store/system'
 
 const activeTab = ref('basic')
+const userStore = useUserStore()
+const systemStore = useSystemStore()
+
+// 判断是否为管理员
+const isAdmin = computed(() => {
+  return userStore.userInfo?.roleCode === 'ADMIN'
+})
 
 // 系统设置数据
 const settings = ref({
@@ -235,6 +258,13 @@ const handleSave = async () => {
     const response = await settingsApi.saveSettings(settings.value)
     if (response.code === 200) {
       ElMessage.success('保存成功')
+      // 更新全局 store 中的系统名称，实现实时同步
+      if (settings.value.systemName) {
+        systemStore.setSystemName(settings.value.systemName)
+      }
+      if (settings.value.systemDescription) {
+        systemStore.setSystemDescription(settings.value.systemDescription)
+      }
       // 重新加载设置
       await loadSettings()
     } else {

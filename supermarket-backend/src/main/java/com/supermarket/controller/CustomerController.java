@@ -37,8 +37,9 @@ public class CustomerController {
             @ApiParam("当前页") @RequestParam(defaultValue = "1") Integer current,
             @ApiParam("每页条数") @RequestParam(defaultValue = "10") Integer size,
             @ApiParam("客户名称") @RequestParam(required = false) String customerName,
-            @ApiParam("手机号") @RequestParam(required = false) String phone) {
-        Page<Customer> page = customerService.getCustomerList(current, size, customerName, phone);
+            @ApiParam("手机号") @RequestParam(required = false) String phone,
+            @ApiParam("地址") @RequestParam(required = false) String address) {
+        Page<Customer> page = customerService.getCustomerList(current, size, customerName, phone, address);
         return Result.success(page);
     }
 

@@ -31,8 +31,11 @@ public class SupplierController {
             @ApiParam("当前页") @RequestParam(defaultValue = "1") Integer current,
             @ApiParam("每页条数") @RequestParam(defaultValue = "10") Integer size,
             @ApiParam("供应商名称") @RequestParam(required = false) String supplierName,
+            @ApiParam("联系人") @RequestParam(required = false) String contactPerson,
+            @ApiParam("联系电话") @RequestParam(required = false) String contactPhone,
+            @ApiParam("地址") @RequestParam(required = false) String address,
             @ApiParam("状态") @RequestParam(required = false) Integer status) {
-        Page<Supplier> page = supplierService.getSupplierList(current, size, supplierName, status);
+        Page<Supplier> page = supplierService.getSupplierList(current, size, supplierName, contactPerson, contactPhone, address, status);
         return Result.success(page);
     }
 

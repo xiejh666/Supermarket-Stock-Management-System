@@ -31,6 +31,7 @@ public class ProductController {
             @ApiParam("当前页") @RequestParam(defaultValue = "1") Integer current,
             @ApiParam("每页条数") @RequestParam(defaultValue = "10") Integer size,
             @ApiParam("商品名称") @RequestParam(required = false) String productName,
+            @ApiParam("商品编码") @RequestParam(required = false) String productCode,
             @ApiParam("分类ID") @RequestParam(required = false) String categoryId,
             @ApiParam("状态") @RequestParam(required = false) Integer status) {
         // 处理categoryId，如果是"all"或为空，则传null
@@ -42,7 +43,7 @@ public class ProductController {
                 // 忽略无效的categoryId
             }
         }
-        Page<Product> page = productService.getProductList(current, size, productName, categoryIdLong, status);
+        Page<Product> page = productService.getProductList(current, size, productName, productCode, categoryIdLong, status);
         return Result.success(page);
     }
 

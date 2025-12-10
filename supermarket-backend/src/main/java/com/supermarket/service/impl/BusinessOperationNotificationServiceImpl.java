@@ -48,15 +48,15 @@ public class BusinessOperationNotificationServiceImpl implements BusinessOperati
     }
 
     @Override
-    public void notifyProductOperation(Long operatorId, String operatorRole, String operation, String productName, Long productId) {
-        log.info("商品操作通知：操作人ID={}, 角色={}, 操作={}, 商品名称={}", operatorId, operatorRole, operation, productName);
+    public void notifyProductOperation(Long operatorId, String operatorRole, String operation, String productName, String productCode, Long productId) {
+        log.info("商品操作通知：操作人ID={}, 角色={}, 操作={}, 商品名称={}, 商品编码={}", operatorId, operatorRole, operation, productName, productCode);
         
         String operatorName = getUserName(operatorId);
         String title = getProductOperationTitle(operation);
-        String content = String.format("%s %s %s了商品：%s", 
-                getRoleDisplayName(operatorRole), operatorName, getOperationDisplayName(operation), productName);
+        String content = String.format("%s %s %s了商品：%s（编码：%s）", 
+                getRoleDisplayName(operatorRole), operatorName, getOperationDisplayName(operation), productName, productCode);
         
-        notifyByRole(operatorRole, operatorId, title, content, "PRODUCT_OPERATION", productId, "PRODUCT");
+        notifyByRole(operatorRole, operatorId, title, content, "PRODUCT_OPERATION", productId, "PRODUCT", productCode);
     }
 
     @Override
@@ -115,29 +115,34 @@ public class BusinessOperationNotificationServiceImpl implements BusinessOperati
     /**
      * 根据角色分发通知的通用方法
      */
-    private void notifyByRole(String operatorRole, Long operatorId, String title, String content, String type, Long businessId, String businessType) {
+    private void notifyByRole(String operatorRole, Long operatorId, String title, String content, String type, Long businessId, String businessType, String relatedCode) {
         if ("ADMIN".equals(operatorRole)) {
             // 管理员操作 → 通知采购员和营业员
             log.info("管理员操作，通知采购员和营业员");
-            notifyUsersByRole(2L, operatorId, title, content, type, businessId, businessType); // 通知采购员
-            notifyUsersByRole(3L, operatorId, title, content, type, businessId, businessType); // 通知营业员
+            notifyUsersByRole(2L, operatorId, title, content, type, businessId, businessType, relatedCode); // 通知采购员
+            notifyUsersByRole(3L, operatorId, title, content, type, businessId, businessType, relatedCode); // 通知营业员
         } else if ("PURCHASER".equals(operatorRole)) {
             // 采购员操作 → 通知管理员和营业员
             log.info("采购员操作，通知管理员和营业员");
-            notifyUsersByRole(1L, operatorId, title, content, type, businessId, businessType); // 通知管理员
-            notifyUsersByRole(3L, operatorId, title, content, type, businessId, businessType); // 通知营业员
+            notifyUsersByRole(1L, operatorId, title, content, type, businessId, businessType, relatedCode); // 通知管理员
+            notifyUsersByRole(3L, operatorId, title, content, type, businessId, businessType, relatedCode); // 通知营业员
         } else if ("CASHIER".equals(operatorRole)) {
             // 营业员操作 → 通知管理员和采购员
             log.info("营业员操作，通知管理员和采购员");
-            notifyUsersByRole(1L, operatorId, title, content, type, businessId, businessType); // 通知管理员
-            notifyUsersByRole(2L, operatorId, title, content, type, businessId, businessType); // 通知采购员
+            notifyUsersByRole(1L, operatorId, title, content, type, businessId, businessType, relatedCode); // 通知管理员
+            notifyUsersByRole(2L, operatorId, title, content, type, businessId, businessType, relatedCode); // 通知采购员
         }
+    }
+
+    // 兼容旧方法（不传relatedCode）
+    private void notifyByRole(String operatorRole, Long operatorId, String title, String content, String type, Long businessId, String businessType) {
+        notifyByRole(operatorRole, operatorId, title, content, type, businessId, businessType, null);
     }
 
     /**
      * 通知指定角色的所有用户
      */
-    private void notifyUsersByRole(Long roleId, Long senderId, String title, String content, String type, Long businessId, String businessType) {
+    private void notifyUsersByRole(Long roleId, Long senderId, String title, String content, String type, Long businessId, String businessType, String relatedCode) {
         log.info("开始查询角色ID为 {} 的用户", roleId);
         
         List<SysUser> users = userMapper.selectList(
@@ -168,6 +173,7 @@ public class BusinessOperationNotificationServiceImpl implements BusinessOperati
             notification.setSenderId(senderId);
             notification.setBusinessId(businessId);
             notification.setBusinessType(businessType);
+            notification.setRelatedCode(relatedCode);
             notification.setIsRead(0);
             notification.setPriority(2); // 中等优先级
             notification.setCreateTime(java.time.LocalDateTime.now());

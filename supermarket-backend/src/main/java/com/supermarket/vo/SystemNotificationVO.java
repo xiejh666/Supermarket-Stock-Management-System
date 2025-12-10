@@ -52,6 +52,9 @@ public class SystemNotificationVO {
     @ApiModelProperty("业务类型描述")
     private String businessTypeDesc;
 
+    @ApiModelProperty("关联编码（如商品编码、订单号等）")
+    private String relatedCode;
+
     @ApiModelProperty("是否已读")
     private Integer isRead;
 

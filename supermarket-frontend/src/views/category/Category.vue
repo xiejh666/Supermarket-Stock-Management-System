@@ -1,5 +1,6 @@
 <template>
   <div class="category-container">
+    <!-- 标题卡片 -->
     <el-card class="page-header">
       <div class="header-content">
         <div class="title-section">
@@ -13,6 +14,19 @@
           新增分类
         </el-button>
       </div>
+    </el-card>
+
+    <!-- 搜索工具栏 -->
+    <el-card class="toolbar">
+      <el-form :inline="true" :model="searchForm">
+        <el-form-item label="分类名称">
+          <el-input v-model="searchForm.categoryName" placeholder="请输入分类名称" clearable @keyup.enter="handleSearch" style="width: 200px;" />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="handleSearch">查询</el-button>
+          <el-button @click="handleReset">重置</el-button>
+        </el-form-item>
+      </el-form>
     </el-card>
 
     <el-card class="table-card">
@@ -47,8 +61,8 @@
         :total="total"
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
-        @size-change="loadData"
-        @current-change="loadData"
+        @size-change="handlePageChange"
+        @current-change="handlePageChange"
         style="margin-top: 20px; justify-content: center;"
       />
     </el-card>
@@ -81,16 +95,23 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import categoryApi from '@/api/category'
 import { canCreate, canUpdate, canDelete, checkPermission } from '@/utils/permission'
 
+const route = useRoute()
+
 const categoryList = ref([])
 const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+
+const searchForm = ref({
+  categoryName: ''
+})
 
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增分类')
@@ -110,14 +131,31 @@ const rules = {
 const loadData = async () => {
   try {
     const { data } = await categoryApi.getList({
-      pageNum: pageNum.value,
-      pageSize: pageSize.value
+      current: pageNum.value,
+      size: pageSize.value,
+      categoryName: searchForm.value.categoryName
     })
     categoryList.value = data.records
     total.value = data.total
   } catch (error) {
     ElMessage.error('加载数据失败')
   }
+}
+
+const handleSearch = () => {
+  pageNum.value = 1
+  loadData()
+}
+
+const handleReset = () => {
+  searchForm.value = {
+    categoryName: ''
+  }
+  handleSearch()
+}
+
+const handlePageChange = () => {
+  loadData()
 }
 
 const handleAdd = () => {
@@ -149,7 +187,8 @@ const handleSubmit = async () => {
     dialogVisible.value = false
     loadData()
   } catch (error) {
-    ElMessage.error('操作失败')
+    const errorMessage = error?.response?.data?.message || error?.message || '操作失败，请联系管理员'
+    ElMessage.error(errorMessage)
   }
 }
 
@@ -166,7 +205,21 @@ const handleDelete = async (row) => {
   }
 }
 
+// 应用路由参数
+const applyRouteParams = () => {
+  if (route.query.categoryName) {
+    searchForm.value.categoryName = route.query.categoryName
+  }
+}
+
+// 监听路由变化（包括时间戳）
+watch(() => [route.query.categoryName, route.query._t], () => {
+  applyRouteParams()
+  loadData()
+}, { immediate: false })
+
 onMounted(() => {
+  applyRouteParams()
   loadData()
 })
 </script>
@@ -201,6 +254,10 @@ onMounted(() => {
       right: 20px;
       transform: translateY(-50%);
     }
+  }
+
+  .toolbar {
+    margin-bottom: 20px;
   }
 
   .table-card {

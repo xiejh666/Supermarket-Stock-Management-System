@@ -102,6 +102,7 @@ public class ActivityServiceImpl implements ActivityService {
                 activity.setId("purchase-" + order.getId());
                 activity.setType("purchase");
                 activity.setBusinessId(order.getId());
+                activity.setOrderNo(order.getOrderNo());
                 activity.setStatus(order.getStatus());
                 
                 if (order.getStatus() == 0) {
@@ -148,6 +149,7 @@ public class ActivityServiceImpl implements ActivityService {
                 activity.setId("sale-" + order.getId());
                 activity.setType("sale");
                 activity.setBusinessId(order.getId());
+                activity.setOrderNo(order.getOrderNo());
                 activity.setStatus(order.getStatus());
                 
                 if (order.getStatus() == 0) {
@@ -197,6 +199,7 @@ public class ActivityServiceImpl implements ActivityService {
                 activity.setId("inventory-" + log.getId());
                 activity.setType("inventory");
                 activity.setBusinessId(log.getProductId());
+                activity.setProductName(product.getProductName());
                 activity.setStatus(log.getChangeType());
                 
                 String changeTypeName = "";

@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 
+import com.supermarket.vo.CaptchaVO;
+
 /**
  * 认证控制器
  */
@@ -21,6 +23,12 @@ import javax.validation.Valid;
 public class AuthController {
 
     private final AuthService authService;
+
+    @GetMapping("/captcha")
+    @ApiOperation("获取验证码")
+    public Result<CaptchaVO> getCaptcha() {
+        return Result.success(authService.getCaptcha());
+    }
 
     @PostMapping("/login")
     @ApiOperation("用户登录")

@@ -6,7 +6,7 @@
         <transition name="fade">
           <div v-if="!isCollapsed" class="logo">
             <i class="el-icon-shopping-cart-2"></i>
-            <span class="logo-text gradient-text">超市管理系统</span>
+            <span class="logo-text gradient-text">{{ systemName }}</span>
           </div>
           <i v-else class="el-icon-shopping-cart-2 logo-icon-small"></i>
         </transition>
@@ -216,6 +216,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/user'
+import { useSystemStore } from '@/store/system'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   HomeFilled,
@@ -246,6 +247,7 @@ import {
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
+const systemStore = useSystemStore()
 
 const isCollapsed = ref(false)
 const showNotifications = ref(false)
@@ -254,6 +256,9 @@ const notificationTab = ref('all')
 // 消息通知数据（从API动态获取）
 const notifications = ref([])
 const unreadCountValue = ref(0)
+
+// 系统名称（从 store 获取）
+const systemName = computed(() => systemStore.systemName)
 
 const userInfo = computed(() => userStore.userInfo || {})
 const activeMenu = computed(() => route.path)
@@ -387,15 +392,65 @@ const markAsReadHandler = async (notification) => {
     }
   }
   
-  // 根据业务类型跳转到对应页面
-  if (notification.businessType === 'PURCHASE_ORDER') {
-    showNotifications.value = false // 关闭抽屉
-    router.push('/purchase')
-    ElMessage.success('已跳转到采购管理页面')
-  } else if (notification.businessType === 'SALE_ORDER') {
-    showNotifications.value = false // 关闭抽屉
-    router.push('/sale')
-    ElMessage.success('已跳转到销售管理页面')
+  // 根据业务类型跳转到对应页面并传递查询参数
+  showNotifications.value = false // 关闭抽屉
+  
+  // 从content中提取关键信息
+  const extractName = (content) => {
+    // 匹配"：商品名称"或"：商品名称，"的格式，只提取商品名称部分
+    const match = content.match(/：([^，,]+)/)
+    return match ? match[1].trim() : ''
+  }
+  
+  const routeMap = {
+    'CATEGORY': {
+      path: '/category',
+      query: { categoryName: extractName(notification.content) },
+      message: '已跳转到分类管理页面'
+    },
+    'PRODUCT': {
+      path: '/product',
+      query: { productCode: notification.relatedCode || '' }, // 使用商品编码查询
+      message: '已跳转到商品管理页面'
+    },
+    'SUPPLIER': {
+      path: '/supplier',
+      query: { supplierName: extractName(notification.content) },
+      message: '已跳转到供应商管理页面'
+    },
+    'CUSTOMER': {
+      path: '/customer',
+      query: { customerName: extractName(notification.content) },
+      message: '已跳转到客户管理页面'
+    },
+    'PURCHASE_ORDER': {
+      path: '/purchase',
+      query: { orderNo: notification.businessId }, // 使用businessId
+      message: '已跳转到采购管理页面'
+    },
+    'SALE_ORDER': {
+      path: '/sale',
+      query: { orderNo: notification.businessId }, // 使用businessId
+      message: '已跳转到销售管理页面'
+    },
+    'INVENTORY': {
+      path: '/inventory',
+      query: { productName: extractName(notification.content) },
+      message: '已跳转到库存管理页面'
+    }
+  }
+  
+  const targetRoute = routeMap[notification.businessType]
+  if (targetRoute) {
+    // 使用replace并添加时间戳，确保即使在当前页面也能触发路由变化
+    router.replace({ 
+      path: targetRoute.path, 
+      query: { 
+        ...targetRoute.query,
+        _t: Date.now() // 添加时间戳确保路由变化
+      } 
+    })
+    ElMessage.success(targetRoute.message)
   }
 }
 
@@ -462,6 +517,9 @@ onMounted(() => {
   if (!userInfo.value || !userInfo.value.username) {
     router.push('/login')
   }
+  
+  // 加载系统设置
+  systemStore.loadSystemSettings()
   
   // 获取消息列表和未读数量
   fetchMessages()

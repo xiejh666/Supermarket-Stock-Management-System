@@ -2,6 +2,7 @@ package com.supermarket.controller;
 
 import com.supermarket.common.Result;
 import com.supermarket.dto.SystemSettingsDTO;
+import com.supermarket.exception.BusinessException;
 import com.supermarket.service.SystemSettingsService;
 import com.supermarket.utils.JwtUtils;
 import io.swagger.annotations.Api;
@@ -35,11 +36,17 @@ public class SystemSettingsController {
     }
     
     /**
-     * 保存系统设置
+     * 保存系统设置（仅管理员）
      */
     @PostMapping
     @ApiOperation("保存系统设置")
     public Result<Void> saveSettings(@RequestBody SystemSettingsDTO settings, HttpServletRequest request) {
+        // 验证是否为管理员
+        String roleCode = getRoleCodeFromRequest(request);
+        if (!"ADMIN".equals(roleCode)) {
+            throw new BusinessException("只有管理员才能修改系统设置");
+        }
+        
         Long userId = getUserIdFromRequest(request);
         systemSettingsService.saveSettings(userId, settings);
         return Result.success();
@@ -63,6 +70,17 @@ public class SystemSettingsController {
         String bearerToken = request.getHeader("Authorization");
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);
+        }
+        return null;
+    }
+    
+    /**
+     * 从请求中获取角色代码
+     */
+    private String getRoleCodeFromRequest(HttpServletRequest request) {
+        String token = getTokenFromRequest(request);
+        if (token != null) {
+            return jwtUtils.getRoleFromToken(token);
         }
         return null;
     }

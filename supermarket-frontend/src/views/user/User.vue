@@ -55,8 +55,8 @@
         :total="total"
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
-        @size-change="loadData"
-        @current-change="loadData"
+        @size-change="handlePageChange"
+        @current-change="handlePageChange"
         style="margin-top: 20px; justify-content: center;"
       />
     </el-card>
@@ -151,14 +151,18 @@ const rules = {
 const loadData = async () => {
   try {
     const { data } = await userApi.getList({
-      pageNum: pageNum.value,
-      pageSize: pageSize.value
+      current: pageNum.value,
+      size: pageSize.value
     })
     userList.value = data.records
     total.value = data.total
   } catch (error) {
     ElMessage.error('加载数据失败')
   }
+}
+
+const handlePageChange = () => {
+  loadData()
 }
 
 const handleAdd = () => {

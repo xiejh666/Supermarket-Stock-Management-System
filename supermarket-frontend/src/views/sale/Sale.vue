@@ -1,49 +1,64 @@
 <template>
   <div class="sale-container">
+    <!-- 标题卡片 -->
     <el-card class="page-header">
       <div class="header-content">
         <div class="title-section">
           <h2>💰 销售管理</h2>
           <p class="subtitle">管理销售订单信息</p>
         </div>
+      </div>
+      <div class="header-actions">
         <el-button v-if="canCreate('sale')" type="primary" @click="handleAdd">
           <el-icon><Plus /></el-icon>
           新增销售单
         </el-button>
       </div>
-      
-      <el-divider style="margin: 15px 0;" />
-      
-      <!-- 搜索栏 -->
-      <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item label="订单号">
-          <el-input v-model="searchForm.orderNo" placeholder="请输入订单号" clearable @keyup.enter="handleSearch" style="width: 200px;" />
-        </el-form-item>
-        <el-form-item label="客户名称">
-          <el-input v-model="searchForm.customerName" placeholder="请输入客户名称" clearable @keyup.enter="handleSearch" style="width: 180px;" />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable style="width: 120px;">
-            <el-option label="待支付" :value="0" />
-            <el-option label="已完成" :value="1" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="销售日期">
-          <el-date-picker
-            v-model="searchForm.dateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            value-format="YYYY-MM-DD"
-            style="width: 260px;"
-            @change="handleSearch"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">查询</el-button>
-          <el-button @click="handleReset">重置</el-button>
-        </el-form-item>
+    </el-card>
+
+    <!-- 搜索工具栏 -->
+    <el-card class="toolbar">
+      <el-form :model="searchForm">
+        <el-row :gutter="20">
+          <el-col :span="6">
+            <el-form-item label="订单号">
+              <el-input v-model="searchForm.orderNo" placeholder="请输入订单号" clearable @keyup.enter="handleSearch" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
+            <el-form-item label="客户名称">
+              <el-input v-model="searchForm.customerName" placeholder="请输入客户名称" clearable @keyup.enter="handleSearch" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="5">
+            <el-form-item label="状态">
+              <el-select v-model="searchForm.status" placeholder="全部" clearable style="width: 100%;">
+                <el-option label="待支付" :value="0" />
+                <el-option label="已完成" :value="1" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="7">
+            <el-form-item label="销售日期">
+              <el-date-picker
+                v-model="searchForm.dateRange"
+                type="daterange"
+                range-separator="至"
+                start-placeholder="开始日期"
+                end-placeholder="结束日期"
+                value-format="YYYY-MM-DD"
+                style="width: 100%;"
+                @change="handleSearch"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="24" style="text-align: right;">
+            <el-button type="primary" @click="handleSearch">查询</el-button>
+            <el-button @click="handleReset">重置</el-button>
+          </el-col>
+        </el-row>
       </el-form>
     </el-card>
 
@@ -94,7 +109,7 @@
     <el-dialog
       v-model="dialogVisible"
       :title="dialogTitle"
-      width="900px"
+      width="1100px"
     >
       <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
         <el-row :gutter="20">
@@ -129,9 +144,9 @@
         </el-button>
         
         <el-table :data="form.items" border style="width: 100%">
-          <el-table-column label="商品" width="200">
+          <el-table-column label="商品" width="280">
             <template #default="{ row }">
-              <el-select v-model="row.productId" placeholder="选择商品" @change="handleProductChange(row)">
+              <el-select v-model="row.productId" placeholder="选择商品" @change="handleProductChange(row)" style="width: 100%">
                 <el-option
                   v-for="product in productList"
                   :key="product.id"
@@ -142,22 +157,22 @@
               </el-select>
             </template>
           </el-table-column>
-          <el-table-column label="销售数量" width="150">
+          <el-table-column label="销售数量" width="180">
             <template #default="{ row }">
-              <el-input-number v-model="row.quantity" :min="1" @change="calculateTotal" />
+              <el-input-number v-model="row.quantity" :min="1" @change="calculateTotal" style="width: 100%" />
             </template>
           </el-table-column>
-          <el-table-column label="销售单价" width="150">
+          <el-table-column label="销售单价" width="180">
             <template #default="{ row }">
-              <el-input-number v-model="row.salePrice" :min="0" :precision="2" @change="calculateTotal" />
+              <el-input-number v-model="row.salePrice" :min="0" :precision="2" @change="calculateTotal" style="width: 100%" />
             </template>
           </el-table-column>
-          <el-table-column label="小计" width="120">
+          <el-table-column label="小计" width="150">
             <template #default="{ row }">
-              ¥{{ (row.quantity * row.salePrice).toFixed(2) }}
+              <span style="color: #67c23a; font-weight: bold;">¥{{ (row.quantity * row.salePrice).toFixed(2) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="80">
+          <el-table-column label="操作" width="100">
             <template #default="{ $index }">
               <el-button type="danger" link @click="handleRemoveItem($index)">删除</el-button>
             </template>
@@ -251,13 +266,19 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import saleApi, { createSaleOrder } from '@/api/sale'
 import productApi from '@/api/product'
 import customerApi from '@/api/customer'
 import { canCreate, canDelete, checkPermission } from '@/utils/permission'
+import { useUserStore } from '@/store/user'
+
+const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
 
 const saleList = ref([])
 const productList = ref([])
@@ -356,8 +377,33 @@ const handleReset = () => {
     status: null,
     dateRange: []
   }
+  
+  // 清除URL查询参数
+  if (route.query.orderNo) {
+    router.replace({ path: route.path, query: {} })
+  }
+  
   handleSearch()
 }
+
+// 应用路由筛选参数
+const applyRouteFilter = () => {
+  // 清除之前的筛选条件
+  if (!route.query.orderNo) {
+    searchForm.value.orderNo = ''
+  }
+  
+  // 应用订单号筛选（从最新动态跳转）
+  if (route.query.orderNo) {
+    searchForm.value.orderNo = route.query.orderNo
+  }
+}
+
+// 监听路由变化（包括时间戳）
+watch(() => [route.query.orderNo, route.query._t], async () => {
+  applyRouteFilter()
+  await loadData()
+}, { immediate: false })
 
 const loadProducts = async () => {
   try {
@@ -436,7 +482,8 @@ const handleSubmit = async () => {
   
   await formRef.value.validate()
   try {
-    await createSaleOrder(form.value, 1) // cashierId 默认为 1
+    const currentUserId = userStore.userInfo?.userId || userStore.userInfo?.id
+    await createSaleOrder(form.value, currentUserId, currentUserId) // cashierId 和 operatorId 都使用当前用户ID
     ElMessage.success('创建成功')
     dialogVisible.value = false
     loadData()
@@ -506,10 +553,14 @@ const handleDelete = async (row) => {
   }
 }
 
-onMounted(() => {
-  loadData()
+onMounted(async () => {
   loadProducts()
   loadCustomers()
+  
+  // 检查路由参数，支持从仪表盘跳转时自动筛选
+  applyRouteFilter()
+  
+  await loadData()
 })
 </script>
 
@@ -519,12 +570,9 @@ onMounted(() => {
 
   .page-header {
     margin-bottom: 20px;
+    position: relative;
 
     .header-content {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-
       .title-section {
         h2 {
           margin: 0 0 8px 0;
@@ -539,10 +587,17 @@ onMounted(() => {
         }
       }
     }
+
+    .header-actions {
+      position: absolute;
+      top: 50%;
+      right: 20px;
+      transform: translateY(-50%);
+    }
   }
-  
-  .search-form {
-     margin-top: 20px;
+
+  .toolbar {
+    margin-bottom: 20px;
   }
 
   .table-card {

@@ -14,7 +14,7 @@ public interface ProductService extends IService<Product> {
      * 分页查询商品列表
      */
     Page<Product> getProductList(Integer current, Integer size, String productName, 
-                                  Long categoryId, Integer status);
+                                  String productCode, Long categoryId, Integer status);
 
     /**
      * 创建商品

@@ -22,7 +22,7 @@ public class SupplierDTO {
     private String supplierName;
 
     @ApiModelProperty("联系人")
-    private String contactName;
+    private String contactPerson;
 
     @ApiModelProperty("联系电话")
     @Pattern(regexp = "^1[3-9]\\d{9}$", message = "联系电话格式不正确")

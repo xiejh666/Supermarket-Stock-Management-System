@@ -15,7 +15,7 @@ public interface SupplierService extends IService<Supplier> {
     /**
      * 分页查询供应商列表
      */
-    Page<Supplier> getSupplierList(Integer current, Integer size, String supplierName, Integer status);
+    Page<Supplier> getSupplierList(Integer current, Integer size, String supplierName, String contactPerson, String contactPhone, String address, Integer status);
 
     /**
      * 查询所有启用的供应商

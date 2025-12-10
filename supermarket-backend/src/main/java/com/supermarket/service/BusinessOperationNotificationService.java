@@ -32,9 +32,10 @@ public interface BusinessOperationNotificationService {
      * @param operatorRole 操作人角色
      * @param operation 操作类型：CREATE, UPDATE, DELETE
      * @param productName 商品名称
+     * @param productCode 商品编码
      * @param productId 商品ID
      */
-    void notifyProductOperation(Long operatorId, String operatorRole, String operation, String productName, Long productId);
+    void notifyProductOperation(Long operatorId, String operatorRole, String operation, String productName, String productCode, Long productId);
 
     /**
      * 分类操作通知

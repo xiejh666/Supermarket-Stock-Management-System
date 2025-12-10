@@ -20,6 +20,12 @@ public class LoginRequest {
     @ApiModelProperty(value = "密码", required = true, example = "123456")
     @NotBlank(message = "密码不能为空")
     private String password;
+
+    @ApiModelProperty(value = "验证码UUID", required = true)
+    private String uuid;
+
+    @ApiModelProperty(value = "验证码", required = true)
+    private String code;
 }
 
 

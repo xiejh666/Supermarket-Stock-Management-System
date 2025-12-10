@@ -13,7 +13,9 @@ const ROLE_PERMISSIONS = {
     canCreate: ['*'],
     canUpdate: ['*'],
     canDelete: ['*'],
-    canAudit: ['*']
+    canAudit: ['*'],
+    canInbound: ['*'],  // 管理员可以入库
+    canOutbound: ['*']  // 管理员可以出库
   },
   PURCHASER: {
     // 采购员权限：可以管理供应商、采购、库存入库

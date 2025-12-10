@@ -43,6 +43,16 @@ public class ActivityVO {
     private Long businessId;
     
     /**
+     * 订单号（采购订单号或销售订单号）
+     */
+    private String orderNo;
+    
+    /**
+     * 商品名称（库存相关）
+     */
+    private String productName;
+    
+    /**
      * 创建时间
      */
     private String time;

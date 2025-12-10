@@ -1,12 +1,18 @@
 package com.supermarket.service;
 
 import com.supermarket.dto.LoginRequest;
+import com.supermarket.vo.CaptchaVO;
 import com.supermarket.vo.LoginVO;
 
 /**
  * 认证服务接口
  */
 public interface AuthService {
+
+    /**
+     * 获取验证码
+     */
+    CaptchaVO getCaptcha();
 
     /**
      * 用户登录

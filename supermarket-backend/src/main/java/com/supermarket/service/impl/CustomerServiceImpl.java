@@ -36,7 +36,7 @@ public class CustomerServiceImpl extends ServiceImpl<CustomerMapper, Customer> i
     }
 
     @Override
-    public Page<Customer> getCustomerList(Integer current, Integer size, String customerName, String phone) {
+    public Page<Customer> getCustomerList(Integer current, Integer size, String customerName, String phone, String address) {
         Page<Customer> page = new Page<>(current, size);
         LambdaQueryWrapper<Customer> wrapper = new LambdaQueryWrapper<>();
         
@@ -45,6 +45,9 @@ public class CustomerServiceImpl extends ServiceImpl<CustomerMapper, Customer> i
         }
         if (StringUtils.hasText(phone)) {
             wrapper.like(Customer::getPhone, phone);
+        }
+        if (StringUtils.hasText(address)) {
+            wrapper.like(Customer::getAddress, address);
         }
         
         wrapper.orderByDesc(Customer::getCreateTime);

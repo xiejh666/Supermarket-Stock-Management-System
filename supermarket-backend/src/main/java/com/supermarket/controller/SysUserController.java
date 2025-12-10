@@ -68,11 +68,18 @@ public class SysUserController {
     }
 
     @PutMapping("/{id}/password")
-    @ApiOperation("重置用户密码")
-    public Result<Void> resetPassword(
+    @ApiOperation("修改用户密码")
+    public Result<Void> updatePassword(
             @PathVariable Long id,
             @RequestParam String newPassword) {
         userService.resetPassword(id, newPassword);
+        return Result.success();
+    }
+
+    @PutMapping("/{id}/reset-password")
+    @ApiOperation("重置用户密码为默认密码123456")
+    public Result<Void> resetPasswordToDefault(@PathVariable Long id) {
+        userService.resetPassword(id, "123456");
         return Result.success();
     }
 

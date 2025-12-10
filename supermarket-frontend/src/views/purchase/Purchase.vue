@@ -115,8 +115,8 @@
         :total="total"
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
-        @size-change="loadData"
-        @current-change="loadData"
+        @size-change="handlePageChange"
+        @current-change="handlePageChange"
         style="margin-top: 20px; justify-content: center;"
       />
     </el-card>
@@ -259,7 +259,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, RefreshLeft, Plus } from '@element-plus/icons-vue'
 import purchaseApi, { createPurchaseOrder, confirmInbound } from '@/api/purchase'
@@ -267,6 +268,9 @@ import supplierApi from '@/api/supplier'
 import productApi from '@/api/product'
 import { useUserStore } from '@/store/user'
 import { canCreate, canDelete, canAudit, checkPermission } from '@/utils/permission'
+
+const route = useRoute()
+const router = useRouter()
 
 const purchaseList = ref([])
 const displayPurchaseList = ref([]) // 显示的列表
@@ -372,6 +376,12 @@ const handleReset = () => {
   queryForm.status = null
   queryForm.createTimeRange = null
   queryForm.inboundTimeRange = null
+  
+  // 清除URL查询参数
+  if (route.query.filter) {
+    router.replace({ path: route.path, query: {} })
+  }
+  
   // 重置后显示所有数据
   displayPurchaseList.value = purchaseList.value
 }
@@ -399,16 +409,22 @@ const getStatusText = (status) => {
 const loadData = async () => {
   try {
     const { data } = await purchaseApi.getList({
-      pageNum: pageNum.value,
-      pageSize: pageSize.value
+      current: pageNum.value,
+      size: pageSize.value
     })
     purchaseList.value = data.records
     total.value = data.total
     // 初始化显示列表
     displayPurchaseList.value = data.records
+    // 加载完数据后应用筛选条件
+    applyFilter()
   } catch (error) {
     ElMessage.error('加载数据失败')
   }
+}
+
+const handlePageChange = () => {
+  loadData()
 }
 
 const loadSuppliers = async () => {
@@ -568,10 +584,40 @@ const handleDelete = async (row) => {
   }
 }
 
-onMounted(() => {
-  loadData()
+// 应用路由筛选参数
+const applyRouteFilter = () => {
+  // 清除之前的筛选条件
+  if (!route.query.filter && !route.query.orderNo) {
+    queryForm.status = null
+    queryForm.orderNo = ''
+  }
+  
+  // 应用待审核筛选
+  if (route.query.filter === 'pending') {
+    queryForm.status = 0 // 0 表示待审核
+  }
+  
+  // 应用订单号筛选（从最新动态跳转）
+  if (route.query.orderNo) {
+    queryForm.orderNo = route.query.orderNo
+    queryForm.status = null // 清除状态筛选
+  }
+}
+
+// 监听路由变化（监听filter、orderNo和时间戳_t）
+watch(() => [route.query.filter, route.query.orderNo, route.query._t], async () => {
+  applyRouteFilter()
+  await loadData() // loadData 会自动调用 applyFilter
+}, { immediate: false })
+
+onMounted(async () => {
   loadSuppliers()
   loadProducts()
+  
+  // 检查路由参数，支持从仪表盘跳转时自动筛选待审核订单
+  applyRouteFilter()
+  
+  await loadData() // loadData 会自动调用 applyFilter
 })
 </script>
 

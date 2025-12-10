@@ -25,6 +25,7 @@
                 WHEN 'SALE_ORDER' THEN '销售订单'
                 ELSE '系统'
             END as businessTypeDesc,
+            n.related_code as relatedCode,
             n.is_read as isRead,
             n.priority,
             CASE n.priority
@@ -84,6 +85,7 @@
                 WHEN 'SALE_ORDER' THEN '销售订单'
                 ELSE '系统'
             END as businessTypeDesc,
+            n.related_code as relatedCode,
             n.is_read as isRead,
             n.priority,
             CASE n.priority

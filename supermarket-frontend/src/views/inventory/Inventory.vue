@@ -95,8 +95,7 @@
             style="width: 140px;"
           >
             <el-option label="库存正常" value="normal" />
-            <el-option label="库存不足" value="low" />
-            <el-option label="无库存" value="empty" />
+            <el-option label="低库存商品" value="low" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -121,8 +120,7 @@
         <el-table-column prop="minStock" label="预警库存" width="120" />
         <el-table-column label="库存状态" width="120">
           <template #default="{ row }">
-            <el-tag v-if="row.stock <= 0" type="danger">无库存</el-tag>
-            <el-tag v-else-if="row.stock <= row.minStock" type="warning">库存不足</el-tag>
+            <el-tag v-if="row.stock <= row.minStock" type="warning">低库存</el-tag>
             <el-tag v-else type="success">库存正常</el-tag>
           </template>
         </el-table-column>
@@ -145,8 +143,8 @@
         :total="total"
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
-        @size-change="loadData"
-        @current-change="loadData"
+        @size-change="handlePageChange"
+        @current-change="handlePageChange"
         style="margin-top: 20px; justify-content: center;"
       />
     </el-card>
@@ -286,14 +284,19 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Refresh, Box, Warning, Goods, Search, Clock } from '@element-plus/icons-vue'
 import inventoryApi from '@/api/inventory'
 import categoryApi from '@/api/category'
 import { canInbound, canOutbound } from '@/utils/permission'
 
+const route = useRoute()
+const router = useRouter()
+
 const inventoryList = ref([])
+const allInventoryList = ref([]) // 用于统计的全量数据
 const categoryList = ref([])
 const pageNum = ref(1)
 const pageSize = ref(10)
@@ -328,12 +331,13 @@ const adjustRules = {
   ]
 }
 
-const totalProducts = computed(() => inventoryList.value.length)
+// 统计数据基于全量数据，不受筛选条件影响
+const totalProducts = computed(() => allInventoryList.value.length)
 const lowStockCount = computed(() => {
-  return inventoryList.value.filter(item => item.stock <= item.minStock).length
+  return allInventoryList.value.filter(item => item.stock <= item.minStock).length
 })
 const totalStock = computed(() => {
-  return inventoryList.value.reduce((sum, item) => sum + item.stock, 0)
+  return allInventoryList.value.reduce((sum, item) => sum + item.stock, 0)
 })
 
 const loadData = async () => {
@@ -345,27 +349,33 @@ const loadData = async () => {
       categoryId: searchForm.value.categoryId
     }
     
-    const { data } = await inventoryApi.getList(params)
-    let list = data.records
-    
-    // 前端按库存状态筛选
-    if (searchForm.value.stockStatus) {
-      list = list.filter(item => {
-        if (searchForm.value.stockStatus === 'normal') {
-          return item.stock > item.minStock // 库存正常：大于预警值
-        } else if (searchForm.value.stockStatus === 'low') {
-          return item.stock > 0 && item.stock <= item.minStock // 库存不足：0 < 库存 ≤ 预警值
-        } else if (searchForm.value.stockStatus === 'empty') {
-          return item.stock === 0 // 无库存：库存为0
-        }
-        return true
-      })
+    // 处理库存状态筛选
+    if (searchForm.value.stockStatus === 'low') {
+      params.isWarning = true  // 低库存
+    } else if (searchForm.value.stockStatus === 'normal') {
+      params.isWarning = false  // 库存正常
     }
     
-    inventoryList.value = list
-    total.value = list.length
+    const { data } = await inventoryApi.getList(params)
+    
+    // 使用后端返回的数据和总数
+    inventoryList.value = data.records
+    total.value = data.total
   } catch (error) {
     ElMessage.error('加载数据失败')
+  }
+}
+
+// 加载全量数据用于统计（不受筛选条件影响）
+const loadAllData = async () => {
+  try {
+    const { data } = await inventoryApi.getList({
+      current: 1,
+      size: 10000 // 获取所有数据
+    })
+    allInventoryList.value = data.records
+  } catch (error) {
+    console.error('加载统计数据失败', error)
   }
 }
 
@@ -380,6 +390,12 @@ const handleReset = () => {
     categoryId: null,
     stockStatus: null
   }
+  
+  // 清除URL查询参数
+  if (route.query.filter) {
+    router.replace({ path: route.path, query: {} })
+  }
+  
   handleSearch()
 }
 
@@ -390,6 +406,10 @@ const handleResetOld = () => {
     categoryId: null
   }
   pageNum.value = 1
+  loadData()
+}
+
+const handlePageChange = () => {
   loadData()
 }
 
@@ -404,6 +424,7 @@ const loadCategories = async () => {
 
 const handleRefresh = () => {
   loadData()
+  loadAllData() // 刷新统计数据
   ElMessage.success('刷新成功')
 }
 
@@ -441,6 +462,7 @@ const handleAdjustSubmit = async () => {
     
     adjustDialogVisible.value = false
     loadData()
+    loadAllData() // 刷新统计数据
   } catch (error) {
     ElMessage.error('操作失败：' + (error.message || '请稍后重试'))
   }
@@ -489,9 +511,42 @@ const handleHistoryDetail = (row) => {
   historyDetailVisible.value = true
 }
 
-onMounted(() => {
+// 应用路由筛选参数
+const applyRouteFilter = () => {
+  // 清除之前的筛选条件
+  if (!route.query.filter && !route.query.productName) {
+    searchForm.value.stockStatus = null
+    searchForm.value.productName = ''
+  }
+  
+  // 应用低库存筛选
+  if (route.query.filter === 'low') {
+    searchForm.value.stockStatus = 'low'
+  }
+  
+  // 应用商品名称筛选（从最新动态跳转）
+  if (route.query.productName) {
+    searchForm.value.productName = route.query.productName
+    searchForm.value.stockStatus = null // 清除库存状态筛选
+  }
+}
+
+// 监听路由变化（监听filter、productName和时间戳_t）
+watch(() => [route.query.filter, route.query.productName, route.query._t], () => {
+  applyRouteFilter()
   loadData()
-  loadCategories()
+}, { immediate: false })
+
+onMounted(async () => {
+  await loadCategories()
+  
+  // 加载全量数据用于统计
+  await loadAllData()
+  
+  // 检查路由参数，支持从仪表盘跳转时自动筛选
+  applyRouteFilter()
+  
+  await loadData()
 })
 </script>
 

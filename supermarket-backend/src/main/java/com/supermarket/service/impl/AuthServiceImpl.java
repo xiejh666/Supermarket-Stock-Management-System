@@ -10,10 +10,18 @@ import com.supermarket.service.AuthService;
 import com.supermarket.service.LoginLimitService;
 import com.supermarket.service.TokenBlacklistService;
 import com.supermarket.utils.JwtUtils;
+import com.supermarket.vo.CaptchaVO;
 import com.supermarket.vo.LoginVO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import cn.hutool.captcha.CaptchaUtil;
+import cn.hutool.captcha.LineCaptcha;
+import cn.hutool.core.lang.UUID;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * 认证服务实现
@@ -28,10 +36,50 @@ public class AuthServiceImpl implements AuthService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final LoginLimitService loginLimitService;
     private final TokenBlacklistService tokenBlacklistService;
+    private final StringRedisTemplate redisTemplate;
+
+    private static final String CAPTCHA_KEY_PREFIX = "captcha:";
+
+    @Override
+    public CaptchaVO getCaptcha() {
+        // 生成验证码
+        LineCaptcha lineCaptcha = CaptchaUtil.createLineCaptcha(120, 40, 4, 100);
+        String code = lineCaptcha.getCode();
+        String imageBase64 = lineCaptcha.getImageBase64Data();
+        
+        // 生成UUID
+        String uuid = UUID.randomUUID().toString(true);
+        
+        // 存入Redis，有效期2分钟
+        redisTemplate.opsForValue().set(CAPTCHA_KEY_PREFIX + uuid, code, 2, TimeUnit.MINUTES);
+        
+        return CaptchaVO.builder()
+                .uuid(uuid)
+                .img(imageBase64)
+                .build();
+    }
 
     @Override
     public LoginVO login(LoginRequest request) {
         System.out.println("========== 登录调试信息 ==========");
+        
+        // 校验验证码
+        if (!StringUtils.hasText(request.getCode()) || !StringUtils.hasText(request.getUuid())) {
+            throw new BusinessException("验证码不能为空");
+        }
+        
+        String verifyKey = CAPTCHA_KEY_PREFIX + request.getUuid();
+        String savedCode = redisTemplate.opsForValue().get(verifyKey);
+        redisTemplate.delete(verifyKey); // 无论成功失败，验证码只使用一次
+        
+        if (savedCode == null) {
+            throw new BusinessException("验证码已过期");
+        }
+        
+        if (!savedCode.equalsIgnoreCase(request.getCode())) {
+            throw new BusinessException("验证码错误");
+        }
+        
         System.out.println("输入用户名: " + request.getUsername());
         System.out.println("输入密码: " + request.getPassword());
         

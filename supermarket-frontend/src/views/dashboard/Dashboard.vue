@@ -17,7 +17,8 @@
         <div 
           class="stat-card card hover-lift" 
           :class="`fade-in-up delay-${index + 1}`"
-          :style="{ background: stat.gradient }"
+          :style="{ background: stat.gradient, cursor: stat.clickable ? 'pointer' : 'default' }"
+          @click="handleStatCardClick(stat)"
         >
           <div class="stat-icon">
             <component :is="stat.icon" />
@@ -254,7 +255,8 @@ const stats = ref([
     change: '+12.5',
     trend: 'up',
     icon: Money,
-    gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    clickable: false
   },
   {
     label: '本月销售额',
@@ -262,7 +264,8 @@ const stats = ref([
     change: '+8.3',
     trend: 'up',
     icon: ShoppingBag,
-    gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+    gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    clickable: false
   },
   {
     label: '低库存商品',
@@ -270,7 +273,10 @@ const stats = ref([
     change: '-2.1',
     trend: 'down',
     icon: Box,
-    gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+    gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+    clickable: true,
+    route: '/inventory',
+    query: { filter: 'low' }
   },
   {
     label: '待审核订单',
@@ -278,7 +284,10 @@ const stats = ref([
     change: '+5.4',
     trend: 'up',
     icon: UserFilled,
-    gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+    gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+    clickable: true,
+    route: '/purchase',
+    query: { filter: 'pending' }
   }
 ])
 
@@ -404,20 +413,44 @@ const getActivityTagType = (iconType) => {
   }
 }
 
+// 处理统计卡片点击
+const handleStatCardClick = (stat) => {
+  if (!stat.clickable) return
+  
+  if (stat.route) {
+    router.push({
+      path: stat.route,
+      query: stat.query || {}
+    })
+  }
+}
+
 // 处理活动点击
 const handleActivityClick = (activity) => {
   console.log('点击活动:', activity)
   
-  // 根据活动类型跳转到对应页面
+  // 根据活动类型跳转到对应页面，并传递查询参数
   switch (activity.type) {
     case 'purchase':
-      router.push('/purchase')
+      // 跳转到采购管理，传递订单号
+      router.push({
+        path: '/purchase',
+        query: { orderNo: activity.orderNo }
+      })
       break
     case 'sale':
-      router.push('/sale')
+      // 跳转到销售管理，传递订单号
+      router.push({
+        path: '/sale',
+        query: { orderNo: activity.orderNo }
+      })
       break
     case 'inventory':
-      router.push('/inventory')
+      // 跳转到库存管理，传递商品名称
+      router.push({
+        path: '/inventory',
+        query: { productName: activity.productName }
+      })
       break
     default:
       console.log('未知活动类型:', activity.type)
@@ -1115,6 +1148,16 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  transition: all 0.3s ease;
+}
+
+.stat-card[style*="cursor: pointer"]:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+}
+
+.stat-card[style*="cursor: pointer"]:active {
+  transform: translateY(-2px) scale(1.01);
 }
 
 .stat-icon {

@@ -51,6 +51,11 @@ public class SystemNotification {
     private String businessType;
 
     /**
+     * 关联编码（如商品编码、订单号等）
+     */
+    private String relatedCode;
+
+    /**
      * 是否已读：0-未读，1-已读
      */
     private Integer isRead;

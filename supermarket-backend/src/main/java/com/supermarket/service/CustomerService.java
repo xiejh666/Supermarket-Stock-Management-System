@@ -19,7 +19,7 @@ public interface CustomerService extends IService<Customer> {
     /**
      * 分页查询客户列表
      */
-    Page<Customer> getCustomerList(Integer current, Integer size, String customerName, String phone);
+    Page<Customer> getCustomerList(Integer current, Integer size, String customerName, String phone, String address);
     
     /**
      * 新增客户

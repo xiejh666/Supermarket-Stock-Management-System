@@ -1,5 +1,6 @@
 <template>
   <div class="customer-container">
+    <!-- 标题卡片 -->
     <el-card class="page-header">
       <div class="header-content">
         <div class="title-section">
@@ -13,16 +14,19 @@
           新增客户
         </el-button>
       </div>
-      
-      <el-divider style="margin: 15px 0;" />
-      
-      <!-- 搜索栏 -->
-      <el-form :inline="true" :model="searchForm" class="search-form">
+    </el-card>
+
+    <!-- 搜索工具栏 -->
+    <el-card class="toolbar">
+      <el-form :inline="true" :model="searchForm">
         <el-form-item label="客户名称">
-          <el-input v-model="searchForm.customerName" placeholder="请输入客户名称" clearable @keyup.enter="handleSearch" />
+          <el-input v-model="searchForm.customerName" placeholder="请输入客户名称" clearable @keyup.enter="handleSearch" style="width: 180px;" />
         </el-form-item>
         <el-form-item label="手机号">
-          <el-input v-model="searchForm.phone" placeholder="请输入手机号" clearable @keyup.enter="handleSearch" />
+          <el-input v-model="searchForm.phone" placeholder="请输入手机号" clearable @keyup.enter="handleSearch" style="width: 180px;" />
+        </el-form-item>
+        <el-form-item label="地址">
+          <el-input v-model="searchForm.address" placeholder="请输入地址" clearable @keyup.enter="handleSearch" style="width: 200px;" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">查询</el-button>
@@ -64,8 +68,8 @@
         :total="total"
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
-        @size-change="loadData"
-        @current-change="loadData"
+        @size-change="handlePageChange"
+        @current-change="handlePageChange"
         style="margin-top: 20px; justify-content: center;"
       />
     </el-card>
@@ -96,12 +100,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import customerApi from '@/api/customer'
 import { canCreate, canUpdate, canDelete, checkPermission } from '@/utils/permission'
 import { useUserStore } from '@/store/user'
+
+const route = useRoute()
 
 const userStore = useUserStore()
 const customerList = ref([])
@@ -112,7 +119,8 @@ const total = ref(0)
 // 搜索表单
 const searchForm = ref({
   customerName: '',
-  phone: ''
+  phone: '',
+  address: ''
 })
 
 const dialogVisible = ref(false)
@@ -140,7 +148,8 @@ const loadData = async () => {
       current: pageNum.value,
       size: pageSize.value,
       customerName: searchForm.value.customerName,
-      phone: searchForm.value.phone
+      phone: searchForm.value.phone,
+      address: searchForm.value.address
     })
     customerList.value = data.records
     total.value = data.total
@@ -160,6 +169,10 @@ const handleReset = () => {
     phone: ''
   }
   handleSearch()
+}
+
+const handlePageChange = () => {
+  loadData()
 }
 
 const handleAdd = () => {
@@ -193,7 +206,8 @@ const handleSubmit = async () => {
     dialogVisible.value = false
     loadData()
   } catch (error) {
-    ElMessage.error('操作失败')
+    const errorMessage = error?.response?.data?.message || error?.message || '操作失败，请联系管理员'
+    ElMessage.error(errorMessage)
   }
 }
 
@@ -211,7 +225,21 @@ const handleDelete = async (row) => {
   }
 }
 
+// 应用路由参数
+const applyRouteParams = () => {
+  if (route.query.customerName) {
+    searchForm.value.customerName = route.query.customerName
+  }
+}
+
+// 监听路由变化（包括时间戳）
+watch(() => [route.query.customerName, route.query._t], () => {
+  applyRouteParams()
+  loadData()
+}, { immediate: false })
+
 onMounted(() => {
+  applyRouteParams()
   loadData()
 })
 </script>
@@ -247,12 +275,17 @@ onMounted(() => {
       transform: translateY(-50%);
     }
   }
-  
+
+  .toolbar {
+    margin-bottom: 20px;
+  }
+
   .search-form {
     margin-top: 20px;
   }
 
   .table-card {
+    margin-top: 20px;
     box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
   }
 }

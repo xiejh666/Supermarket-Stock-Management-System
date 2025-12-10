@@ -24,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,27 +51,28 @@ public class InventoryServiceImpl extends ServiceImpl<InventoryMapper, Inventory
 
     @Override
     public Page<InventoryVO> getInventoryList(Integer current, Integer size, String productName, Long categoryId, Boolean isWarning) {
-        Page<Inventory> page = new Page<>(current, size);
-        
+        // 1. 先查询所有库存数据（不分页）
         LambdaQueryWrapper<Inventory> wrapper = new LambdaQueryWrapper<>();
-        Page<Inventory> inventoryPage = inventoryMapper.selectPage(page, wrapper);
+        List<Inventory> allInventory = inventoryMapper.selectList(wrapper);
         
-        // 查询商品信息
-        List<Long> productIds = inventoryPage.getRecords().stream()
-                .map(Inventory::getProductId)
-                .collect(Collectors.toList());
-        
-        if (productIds.isEmpty()) {
+        if (allInventory.isEmpty()) {
             return new Page<>(current, size, 0);
         }
+        
+        // 2. 查询所有商品信息
+        List<Long> productIds = allInventory.stream()
+                .map(Inventory::getProductId)
+                .distinct()
+                .collect(Collectors.toList());
         
         List<Product> products = productMapper.selectBatchIds(productIds);
         Map<Long, Product> productMap = products.stream()
                 .collect(Collectors.toMap(Product::getId, p -> p));
         
-        // 查询分类信息
+        // 3. 查询分类信息
         List<Long> categoryIds = products.stream()
                 .map(Product::getCategoryId)
+                .filter(id -> id != null)
                 .distinct()
                 .collect(Collectors.toList());
         
@@ -79,8 +81,8 @@ public class InventoryServiceImpl extends ServiceImpl<InventoryMapper, Inventory
                 categoryMapper.selectBatchIds(categoryIds).stream()
                         .collect(Collectors.toMap(Category::getId, Category::getCategoryName));
         
-        // 转换为VO
-        List<InventoryVO> voList = inventoryPage.getRecords().stream()
+        // 4. 转换为VO并进行条件过滤
+        List<InventoryVO> allVoList = allInventory.stream()
                 .map(inventory -> {
                     Product product = productMap.get(inventory.getProductId());
                     if (product == null) {
@@ -114,9 +116,17 @@ public class InventoryServiceImpl extends ServiceImpl<InventoryMapper, Inventory
                 .filter(vo -> isWarning == null || vo.getIsWarning().equals(isWarning))
                 .collect(Collectors.toList());
         
-        Page<InventoryVO> resultPage = new Page<>(current, size);
-        resultPage.setRecords(voList);
-        resultPage.setTotal(voList.size());
+        // 5. 手动分页
+        int total = allVoList.size();
+        int fromIndex = (current - 1) * size;
+        int toIndex = Math.min(fromIndex + size, total);
+        
+        List<InventoryVO> pageRecords = fromIndex < total ? 
+                allVoList.subList(fromIndex, toIndex) : new ArrayList<>();
+        
+        // 6. 构建分页结果
+        Page<InventoryVO> resultPage = new Page<>(current, size, total);
+        resultPage.setRecords(pageRecords);
         
         return resultPage;
     }

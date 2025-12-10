@@ -38,10 +38,11 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
 
     @Override
     public Page<Product> getProductList(Integer current, Integer size, String productName, 
-                                       Long categoryId, Integer status) {
+                                       String productCode, Long categoryId, Integer status) {
         Page<Product> page = new Page<>(current, size);
         Page<Product> result = lambdaQuery()
-                .like(productName != null, Product::getProductName, productName)
+                .like(productName != null && !productName.isEmpty(), Product::getProductName, productName)
+                .like(productCode != null && !productCode.isEmpty(), Product::getProductCode, productCode)
                 .eq(categoryId != null, Product::getCategoryId, categoryId)
                 .eq(status != null, Product::getStatus, status)
                 .orderByDesc(Product::getCreateTime)
@@ -95,12 +96,20 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void createProduct(ProductDTO dto, Long operatorId) {
+        // 检查商品编码是否存在
+        Long codeCount = lambdaQuery()
+                .eq(Product::getProductCode, dto.getProductCode())
+                .count();
+        if (codeCount > 0) {
+            throw new BusinessException("商品编码已存在，请使用其他编码");
+        }
+        
         // 检查商品名称是否存在
-        Long count = lambdaQuery()
+        Long nameCount = lambdaQuery()
                 .eq(Product::getProductName, dto.getProductName())
                 .count();
-        if (count > 0) {
-            throw new BusinessException("商品名称已存在");
+        if (nameCount > 0) {
+            throw new BusinessException("商品名称已存在，请使用其他名称");
         }
 
         Product product = new Product();
@@ -126,7 +135,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         try {
             String operatorRole = getUserRole(operatorId);
             businessNotificationService.notifyProductOperation(
-                operatorId, operatorRole, "CREATE", product.getProductName(), product.getId()
+                operatorId, operatorRole, "CREATE", product.getProductName(), product.getProductCode(), product.getId()
             );
         } catch (Exception e) {
             log.error("发送商品创建通知失败", e);
@@ -145,13 +154,22 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
             throw new BusinessException("商品不存在");
         }
 
+        // 检查商品编码是否被其他商品占用
+        Long codeCount = lambdaQuery()
+                .eq(Product::getProductCode, dto.getProductCode())
+                .ne(Product::getId, dto.getId())
+                .count();
+        if (codeCount > 0) {
+            throw new BusinessException("商品编码已被其他商品使用，请使用其他编码");
+        }
+
         // 检查商品名称是否被其他商品占用
-        Long count = lambdaQuery()
+        Long nameCount = lambdaQuery()
                 .eq(Product::getProductName, dto.getProductName())
                 .ne(Product::getId, dto.getId())
                 .count();
-        if (count > 0) {
-            throw new BusinessException("商品名称已存在");
+        if (nameCount > 0) {
+            throw new BusinessException("商品名称已被其他商品使用，请使用其他名称");
         }
 
         BeanUtils.copyProperties(dto, product);
@@ -181,7 +199,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         try {
             String operatorRole = getUserRole(operatorId);
             businessNotificationService.notifyProductOperation(
-                operatorId, operatorRole, "UPDATE", product.getProductName(), product.getId()
+                operatorId, operatorRole, "UPDATE", product.getProductName(), product.getProductCode(), product.getId()
             );
         } catch (Exception e) {
             log.error("发送商品编辑通知失败", e);
@@ -220,7 +238,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         try {
             String operatorRole = getUserRole(operatorId);
             businessNotificationService.notifyProductOperation(
-                operatorId, operatorRole, "DELETE", product.getProductName(), product.getId()
+                operatorId, operatorRole, "DELETE", product.getProductName(), product.getProductCode(), product.getId()
             );
         } catch (Exception e) {
             log.error("发送商品删除通知失败", e);
@@ -247,7 +265,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
             String operatorRole = getUserRole(operatorId);
             String operation = status == 1 ? "ENABLE" : "DISABLE";
             businessNotificationService.notifyProductOperation(
-                operatorId, operatorRole, operation, product.getProductName(), product.getId()
+                operatorId, operatorRole, operation, product.getProductName(), product.getProductCode(), product.getId()
             );
         } catch (Exception e) {
             log.error("发送商品状态更新通知失败", e);

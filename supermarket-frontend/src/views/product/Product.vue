@@ -21,6 +21,9 @@
         <el-form-item label="商品名称">
           <el-input v-model="queryForm.productName" placeholder="请输入商品名称" clearable style="width: 200px;" />
         </el-form-item>
+        <el-form-item label="商品编码">
+          <el-input v-model="queryForm.productCode" placeholder="请输入商品编码" clearable style="width: 200px;" />
+        </el-form-item>
         <el-form-item label="商品分类">
           <el-select v-model="queryForm.categoryId" placeholder="请选择分类" clearable style="width: 180px;">
             <el-option
@@ -53,7 +56,11 @@
         style="width: 100%"
         :header-cell-style="{ background: '#fafafa', fontWeight: '600' }"
       >
-        <el-table-column type="index" label="序号" width="60" />
+        <el-table-column label="序号" width="60">
+          <template #default="{ $index }">
+            {{ (pagination.current - 1) * pagination.size + $index + 1 }}
+          </template>
+        </el-table-column>
         <el-table-column prop="productCode" label="商品编码" width="120" />
         <el-table-column prop="productName" label="商品名称" min-width="150" />
         <el-table-column prop="specification" label="规格" width="100" />
@@ -114,8 +121,8 @@
         :total="pagination.total"
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
-        @size-change="handleSearch"
-        @current-change="handleSearch"
+        @size-change="handlePageChange"
+        @current-change="handlePageChange"
       />
     </el-card>
 
@@ -289,7 +296,8 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Goods,
@@ -313,17 +321,21 @@ import { canCreate, canUpdate, canDelete, checkPermission } from '@/utils/permis
 import { getToken } from '@/utils/auth'
 import { useUserStore } from '@/store/user'
 
+const route = useRoute()
 const userStore = useUserStore()
-const loading = ref(false)
-const submitLoading = ref(false)
+
+const productList = ref([])
 const dialogVisible = ref(false)
 const viewDialogVisible = ref(false)
 const dialogTitle = ref('新增商品')
 const formRef = ref(null)
 const viewData = ref({})
+const loading = ref(false)
+const submitLoading = ref(false)
 
 const queryForm = reactive({
   productName: '',
+  productCode: '',
   categoryId: null,
   status: null
 })
@@ -455,10 +467,16 @@ const handleSearch = () => {
   fetchData()
 }
 
+// 分页变化
+const handlePageChange = () => {
+  fetchData()
+}
+
 // 重置
 const handleReset = () => {
   Object.assign(queryForm, {
     productName: '',
+    productCode: '',
     categoryId: null,
     status: null
   })
@@ -568,14 +586,42 @@ const handleSubmit = async () => {
     fetchData()
   } catch (error) {
     if (error !== false) {
-      ElMessage.error('操作失败')
+      // 显示后端返回的具体错误信息
+      const errorMessage = error?.response?.data?.message || error?.message || '操作失败，请联系管理员'
+      ElMessage.error(errorMessage)
     }
   } finally {
     submitLoading.value = false
   }
 }
 
+// 应用路由参数
+const applyRouteParams = () => {
+  // 如果有路由参数，先清空表单
+  if (route.query.productName || route.query.productCode) {
+    queryForm.productName = ''
+    queryForm.productCode = ''
+    queryForm.categoryId = null
+    queryForm.status = null
+  }
+  
+  // 应用路由参数
+  if (route.query.productName) {
+    queryForm.productName = route.query.productName
+  }
+  if (route.query.productCode) {
+    queryForm.productCode = route.query.productCode
+  }
+}
+
+// 监听路由变化（包括时间戳）
+watch(() => [route.query.productName, route.query.productCode, route.query._t], () => {
+  applyRouteParams()
+  fetchData()
+}, { immediate: false })
+
 onMounted(() => {
+  applyRouteParams()
   fetchData()
   fetchCategories()
 })

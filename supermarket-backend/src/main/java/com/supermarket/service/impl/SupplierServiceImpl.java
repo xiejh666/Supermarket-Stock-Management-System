@@ -31,10 +31,13 @@ public class SupplierServiceImpl extends ServiceImpl<SupplierMapper, Supplier> i
     private final SysUserMapper userMapper;
 
     @Override
-    public Page<Supplier> getSupplierList(Integer current, Integer size, String supplierName, Integer status) {
+    public Page<Supplier> getSupplierList(Integer current, Integer size, String supplierName, String contactPerson, String contactPhone, String address, Integer status) {
         Page<Supplier> page = new Page<>(current, size);
         return lambdaQuery()
-                .like(supplierName != null, Supplier::getSupplierName, supplierName)
+                .like(supplierName != null && !supplierName.isEmpty(), Supplier::getSupplierName, supplierName)
+                .like(contactPerson != null && !contactPerson.isEmpty(), Supplier::getContactPerson, contactPerson)
+                .like(contactPhone != null && !contactPhone.isEmpty(), Supplier::getContactPhone, contactPhone)
+                .like(address != null && !address.isEmpty(), Supplier::getAddress, address)
                 .eq(status != null, Supplier::getStatus, status)
                 .orderByDesc(Supplier::getCreateTime)
                 .page(page);

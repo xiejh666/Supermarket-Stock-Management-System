@@ -47,8 +47,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             
             // 配置访问权限
             .authorizeRequests()
-            // 允许登录接口无需认证
-            .antMatchers("/auth/login", "/auth/register").permitAll()
+            // 允许登录和验证码接口无需认证
+            .antMatchers("/auth/login", "/auth/register", "/auth/captcha").permitAll()
             // Swagger 文档接口无需认证
             .antMatchers(
                 "/swagger-ui.html",

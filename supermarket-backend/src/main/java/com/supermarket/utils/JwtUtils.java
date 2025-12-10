@@ -92,6 +92,15 @@ public class JwtUtils {
     }
 
     /**
+     * 从Token中获取角色代码
+     */
+    public String getRoleFromToken(String token) {
+        Claims claims = getClaimsFromToken(token);
+        Object roleCode = claims.get("roleCode");
+        return roleCode != null ? roleCode.toString() : null;
+    }
+
+    /**
      * 验证Token是否过期
      */
     public Boolean isTokenExpired(String token) {
