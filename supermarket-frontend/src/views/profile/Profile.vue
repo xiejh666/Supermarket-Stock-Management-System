@@ -1,6 +1,6 @@
 <template>
-  <div class="profile-container">
-    <el-card class="profile-header">
+  <div class="profile-container glass-page">
+    <el-card class="profile-header page-header">
       <div class="header-content">
         <div class="title-section">
           <h2>
@@ -15,12 +15,12 @@
     <el-row :gutter="20">
       <!-- 左侧：个人信息卡片 -->
       <el-col :xs="24" :sm="24" :md="8">
-        <el-card class="user-card">
+        <el-card class="user-card info-card-rounded">
           <div class="user-profile">
             <el-avatar :size="100" :src="avatarUrl" class="user-avatar">
               <el-icon><UserFilled /></el-icon>
             </el-avatar>
-            <el-button type="primary" size="small" @click="showAvatarDialog = true" style="margin-top: 12px">
+            <el-button type="primary" size="small" @click="showAvatarDialog = true" class="glass-btn primary small-btn" style="margin-top: 16px">
               更换头像
             </el-button>
             <h3 class="user-name">{{ form.realName || form.username }}</h3>
@@ -33,11 +33,11 @@
 
       <!-- 右侧：详细信息 -->
       <el-col :xs="24" :sm="24" :md="16">
-        <el-card class="info-card">
-          <el-tabs v-model="activeTab">
+        <el-card class="info-card info-card-rounded">
+          <el-tabs v-model="activeTab" class="custom-tabs">
             <!-- 基本信息 -->
             <el-tab-pane label="基本信息" name="basic">
-              <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
+              <el-form :model="form" :rules="rules" ref="formRef" label-width="100px" class="profile-form">
                 <el-form-item label="用户名" prop="username">
                   <el-input v-model="form.username" disabled>
                     <template #prefix>
@@ -73,18 +73,18 @@
                     </template>
                   </el-input>
                 </el-form-item>
-                <el-form-item>
-                  <el-button type="primary" @click="handleSave" :loading="saving">
+                <el-form-item class="form-actions">
+                  <el-button type="primary" @click="handleSave" :loading="saving" class="glass-btn primary">
                     保存修改
                   </el-button>
-                  <el-button @click="handleReset">重置</el-button>
+                  <el-button @click="handleReset" class="glass-btn plain">重置</el-button>
                 </el-form-item>
               </el-form>
             </el-tab-pane>
 
             <!-- 修改密码 -->
             <el-tab-pane label="修改密码" name="password">
-              <el-form :model="passwordForm" :rules="passwordRules" ref="passwordFormRef" label-width="100px">
+              <el-form :model="passwordForm" :rules="passwordRules" ref="passwordFormRef" label-width="100px" class="profile-form">
                 <el-form-item label="原密码" prop="oldPassword">
                   <el-input
                     v-model="passwordForm.oldPassword"
@@ -121,11 +121,11 @@
                     </template>
                   </el-input>
                 </el-form-item>
-                <el-form-item>
-                  <el-button type="primary" @click="handleChangePassword" :loading="changingPassword">
-                    修改密码
+                <el-form-item class="form-actions">
+                  <el-button type="primary" @click="handleChangePassword" :loading="changingPassword" class="glass-btn primary">
+                    确认修改
                   </el-button>
-                  <el-button @click="resetPasswordForm">重置</el-button>
+                  <el-button @click="resetPasswordForm" class="glass-btn plain">重置</el-button>
                 </el-form-item>
               </el-form>
             </el-tab-pane>
@@ -133,9 +133,9 @@
             <!-- 账号安全 -->
             <el-tab-pane label="账号安全" name="security">
               <div class="security-list">
-                <div class="security-item">
+                <div class="security-item glass-security-card">
                   <div class="security-info">
-                    <el-icon class="security-icon" :color="form.status === 1 ? '#67c23a' : '#f56c6c'">
+                    <el-icon class="security-icon" :color="form.status === 1 ? '#10b981' : '#ef4444'">
                       <CircleCheck />
                     </el-icon>
                     <div>
@@ -143,43 +143,43 @@
                       <div class="security-desc">{{ form.status === 1 ? '您的账号状态正常' : '您的账号已被禁用' }}</div>
                     </div>
                   </div>
-                  <el-tag :type="form.status === 1 ? 'success' : 'danger'">
+                  <el-tag :type="form.status === 1 ? 'success' : 'danger'" effect="light" class="round-tag">
                     {{ form.status === 1 ? '正常' : '禁用' }}
                   </el-tag>
                 </div>
-                <div class="security-item">
+                <div class="security-item glass-security-card">
                   <div class="security-info">
-                    <el-icon class="security-icon" color="#409eff"><Phone /></el-icon>
+                    <el-icon class="security-icon" color="#3b82f6"><Phone /></el-icon>
                     <div>
                       <div class="security-title">手机绑定</div>
                       <div class="security-desc">{{ form.phone || '未绑定手机号' }}</div>
                     </div>
                   </div>
-                  <el-button type="primary" text @click="activeTab = 'basic'">
+                  <el-button @click="activeTab = 'basic'" class="glass-btn plain small-btn">
                     {{ form.phone ? '修改' : '绑定' }}
                   </el-button>
                 </div>
-                <div class="security-item">
+                <div class="security-item glass-security-card">
                   <div class="security-info">
-                    <el-icon class="security-icon" color="#e6a23c"><Message /></el-icon>
+                    <el-icon class="security-icon" color="#ec4899"><Message /></el-icon>
                     <div>
                       <div class="security-title">邮箱绑定</div>
                       <div class="security-desc">{{ form.email || '未绑定邮箱' }}</div>
                     </div>
                   </div>
-                  <el-button type="primary" text @click="activeTab = 'basic'">
+                  <el-button @click="activeTab = 'basic'" class="glass-btn plain small-btn">
                     {{ form.email ? '修改' : '绑定' }}
                   </el-button>
                 </div>
-                <div class="security-item">
+                <div class="security-item glass-security-card">
                   <div class="security-info">
-                    <el-icon class="security-icon" color="#f56c6c"><Lock /></el-icon>
+                    <el-icon class="security-icon" color="#f59e0b"><Lock /></el-icon>
                     <div>
                       <div class="security-title">登录密码</div>
-                      <div class="security-desc">建议定期更换密码</div>
+                      <div class="security-desc">建议定期更换密码以保障安全</div>
                     </div>
                   </div>
-                  <el-button type="primary" text @click="activeTab = 'password'">修改</el-button>
+                  <el-button @click="activeTab = 'password'" class="glass-btn primary small-btn">修改</el-button>
                 </div>
               </div>
             </el-tab-pane>
@@ -189,9 +189,9 @@
     </el-row>
 
     <!-- 更换头像对话框 -->
-    <el-dialog v-model="showAvatarDialog" title="更换头像" width="600px">
+    <el-dialog v-model="showAvatarDialog" title="更换头像" width="600px" custom-class="glass-dialog">
       <div class="avatar-upload-section">
-        <h4 style="margin-bottom: 16px; color: #606266;">上传自定义头像</h4>
+        <h4 style="margin-bottom: 16px; color: #1e293b; font-weight: 700;">上传自定义头像</h4>
         <el-upload
           class="avatar-uploader"
           :action="uploadUrl"
@@ -208,7 +208,7 @@
             <div class="upload-text">点击上传头像</div>
           </div>
         </el-upload>
-        <div class="upload-tip">支持jpg、png格式，大小不超过2MB</div>
+        <div class="upload-tip">支持 jpg、png 格式，大小不超过 2MB</div>
       </div>
       
       <el-divider>或选择默认头像</el-divider>
@@ -221,12 +221,12 @@
           :class="{ active: avatarUrl === avatar }"
           @click="selectAvatar(avatar)"
         >
-          <el-avatar :size="80" :src="avatar" />
+          <el-avatar :size="80" :src="avatar" class="option-avatar" />
         </div>
       </div>
       <template #footer>
-        <el-button @click="showAvatarDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleSaveAvatar" :loading="uploadLoading">确定</el-button>
+        <el-button @click="showAvatarDialog = false" class="glass-btn plain">取消</el-button>
+        <el-button type="primary" @click="handleSaveAvatar" :loading="uploadLoading" class="glass-btn primary">确定保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -519,109 +519,125 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
+@use "@/styles/glass-theme.scss" as *;
+
 .profile-container {
-  padding: 20px;
-  max-width: 1400px;
+  padding: 0;
+  max-width: 1200px;
   margin: 0 auto;
-}
 
-.profile-header {
-  margin-bottom: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  .profile-header {
+    margin-bottom: 24px;
+    border: none;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
 
-  :deep(.el-card__body) {
-    padding: 30px;
-  }
+    .title-section {
+      h2 {
+        margin: 0 0 8px 0;
+        font-size: 24px;
+        font-weight: 800;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
 
-  .header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-
-    h2 {
-      margin: 0 0 8px 0;
-      font-size: 28px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-
-      .el-icon {
-        font-size: 32px;
+      .subtitle {
+        margin: 0;
+        color: #64748b;
+        font-size: 14px;
       }
     }
-
-    .subtitle {
-      margin: 0;
-      opacity: 0.9;
-      font-size: 14px;
-    }
   }
 }
 
-.user-card {
-  :deep(.el-card__body) {
-    padding: 30px 20px;
-  }
+.info-card-rounded {
+  border-radius: 20px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 8px 32px -12px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.8);
+  margin-bottom: 20px;
 }
 
 .user-profile {
   text-align: center;
+  padding: 20px 0;
 
   .user-avatar {
     margin-bottom: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 4px solid #fff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   }
 
   .user-name {
     margin: 16px 0 8px 0;
     font-size: 20px;
-    font-weight: 500;
+    font-weight: 700;
+    color: #1e293b;
   }
 
   .user-role-tag {
     font-size: 12px;
+    border-radius: 8px;
+    padding: 0 12px;
   }
 }
 
-.info-card {
+.custom-tabs {
   :deep(.el-tabs__nav-wrap::after) {
     display: none;
   }
 
   :deep(.el-tabs__item) {
     font-size: 15px;
-    padding: 0 30px;
+    font-weight: 600;
+    padding: 0 24px;
+    color: #64748b;
+
+    &.is-active {
+      color: #3b82f6;
+    }
   }
 
-  :deep(.el-form) {
-    max-width: 600px;
-    padding: 20px 0;
+  :deep(.el-tabs__active-bar) {
+    height: 3px;
+    border-radius: 3px;
+    background-color: #3b82f6;
+  }
+}
+
+.profile-form {
+  max-width: 500px;
+  padding: 20px 0;
+
+  .form-actions {
+    margin-top: 32px;
+    display: flex;
+    gap: 12px;
   }
 }
 
 .security-list {
-  padding: 20px 0;
+  padding: 10px 0;
 }
 
-.security-item {
+.glass-security-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 20px;
   margin-bottom: 16px;
-  background: #f5f7fa;
-  border-radius: 8px;
-  transition: all 0.3s;
+  background: rgba(248, 250, 252, 0.6);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:hover {
-    background: #e8edf3;
+    background: rgba(255, 255, 255, 0.9);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  }
-
-  &:last-child {
-    margin-bottom: 0;
+    box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.08);
+    border-color: rgba(59, 130, 246, 0.2);
   }
 }
 
@@ -632,99 +648,117 @@ onMounted(() => {
 
   .security-icon {
     font-size: 24px;
+    padding: 10px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
   }
 
   .security-title {
     font-size: 15px;
-    font-weight: 500;
-    margin-bottom: 4px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 2px;
   }
 
   .security-desc {
     font-size: 13px;
-    color: #909399;
+    color: #64748b;
   }
 }
 
-// 头像上传样式
+.round-tag {
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.small-btn {
+  height: 32px !important;
+  padding: 0 16px !important;
+  font-size: 13px !important;
+  border-radius: 10px !important;
+}
+
+// 头像上传样式修复
 .avatar-upload-section {
+  text-align: center;
+  
   .avatar-uploader {
+    display: inline-block;
+    
     :deep(.el-upload) {
-      border: 2px dashed #d9d9d9;
-      border-radius: 8px;
+      border: 2px dashed #e2e8f0;
+      border-radius: 20px;
       cursor: pointer;
       position: relative;
       overflow: hidden;
       transition: all 0.3s;
-      width: 178px;
-      height: 178px;
+      width: 160px;
+      height: 160px;
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: #fafafa;
+      background-color: #f8fafc;
 
       &:hover {
-        border-color: #409eff;
-        background-color: #f0f7ff;
+        border-color: #3b82f6;
+        background-color: rgba(59, 130, 246, 0.02);
       }
     }
 
     .avatar-preview {
-      width: 178px;
-      height: 178px;
+      width: 160px;
+      height: 160px;
       display: block;
       object-fit: cover;
     }
 
     .avatar-uploader-icon {
-      text-align: center;
+      color: #94a3b8;
       
       .el-icon {
         font-size: 32px;
-        color: #8c939d;
         margin-bottom: 8px;
       }
 
       .upload-text {
-        font-size: 14px;
-        color: #606266;
-        margin-top: 8px;
+        font-size: 13px;
+        font-weight: 500;
       }
     }
   }
 
   .upload-tip {
     font-size: 12px;
-    color: #909399;
-    margin-top: 8px;
+    color: #94a3b8;
+    margin-top: 12px;
   }
 }
 
 .avatar-options {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  padding: 20px 0;
+  gap: 16px;
+  padding: 10px 0;
 }
 
 .avatar-option {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 12px;
+  padding: 8px;
   border: 2px solid transparent;
-  border-radius: 12px;
+  border-radius: 16px;
   cursor: pointer;
   transition: all 0.3s;
 
   &:hover {
-    border-color: #409eff;
-    background: #ecf5ff;
+    background: rgba(59, 130, 246, 0.05);
   }
 
   &.active {
-    border-color: #409eff;
-    background: #ecf5ff;
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.08);
   }
 }
 
@@ -733,10 +767,6 @@ onMounted(() => {
     :deep(.el-card__body) {
       padding: 20px;
     }
-
-    h2 {
-      font-size: 22px;
-    }
   }
 
   .avatar-options {
@@ -744,3 +774,4 @@ onMounted(() => {
   }
 }
 </style>
+

@@ -1,5 +1,5 @@
 <template>
-  <div class="customer-container">
+  <div class="customer-container glass-page">
     <!-- 标题卡片 -->
     <el-card class="page-header">
       <div class="header-content">
@@ -9,7 +9,12 @@
         </div>
       </div>
       <div class="header-actions">
-        <el-button v-if="canCreate('customer')" type="primary" @click="handleAdd">
+        <el-button
+          v-if="canCreate('customer')"
+          type="primary"
+          @click="handleAdd"
+          class="glass-btn primary"
+        >
           <el-icon><Plus /></el-icon>
           新增客户
         </el-button>
@@ -29,8 +34,8 @@
           <el-input v-model="searchForm.address" placeholder="请输入地址" clearable @keyup.enter="handleSearch" style="width: 200px;" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleSearch">查询</el-button>
-          <el-button @click="handleReset">重置</el-button>
+          <el-button type="primary" @click="handleSearch" class="glass-btn primary">查询</el-button>
+          <el-button @click="handleReset" class="glass-btn plain">重置</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -144,7 +149,6 @@ const rules = {
 
 const loadData = async () => {
   try {
-    console.log('加载客户数据 - 页码:', pageNum.value, '每页条数:', pageSize.value)
     const { data } = await customerApi.getList({
       current: pageNum.value,
       size: pageSize.value,
@@ -152,12 +156,9 @@ const loadData = async () => {
       phone: searchForm.value.phone,
       address: searchForm.value.address
     })
-    console.log('返回数据:', data)
-    // 确保每次都是新的数组，避免Vue的响应式缓存问题
     customerList.value = [...data.records]
     total.value = data.total
   } catch (error) {
-    console.error('加载客户数据失败:', error)
     ElMessage.error('加载数据失败')
   }
 }
@@ -170,7 +171,8 @@ const handleSearch = () => {
 const handleReset = () => {
   searchForm.value = {
     customerName: '',
-    phone: ''
+    phone: '',
+    address: ''
   }
   handleSearch()
 }
@@ -254,48 +256,47 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
+@use "@/styles/glass-theme.scss" as *;
+
 .customer-container {
-  padding: 20px;
+  &.glass-page {
+  }
 
   .page-header {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
     position: relative;
+    border: none;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
 
-    .header-content {
-      .title-section {
-        h2 {
-          margin: 0 0 8px 0;
-          font-size: 24px;
-          font-weight: 600;
-        }
+    .title-section {
+      h2 {
+        margin: 0 0 8px 0;
+        font-size: 24px;
+        font-weight: 800;
+        color: #1e293b;
+      }
 
-        .subtitle {
-          margin: 0;
-          color: #909399;
-          font-size: 14px;
-        }
+      .subtitle {
+        margin: 0;
+        color: #64748b;
+        font-size: 14px;
       }
     }
 
     .header-actions {
       position: absolute;
       top: 50%;
-      right: 20px;
+      right: 24px;
       transform: translateY(-50%);
     }
   }
 
   .toolbar {
-    margin-bottom: 20px;
-  }
-
-  .search-form {
-    margin-top: 20px;
+    margin-bottom: 24px;
   }
 
   .table-card {
-    margin-top: 20px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+    padding: 8px;
   }
 }
 </style>

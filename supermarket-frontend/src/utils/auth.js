@@ -13,8 +13,8 @@ export function getToken() {
  */
 export function setToken(token) {
   localStorage.setItem(TOKEN_KEY, token)
-  // 设置过期时间（15分钟后）
-  const expireTime = Date.now() + 15 * 60 * 1000
+  // 设置过期时间（24小时后）
+  const expireTime = Date.now() + 24 * 60 * 60 * 1000
   localStorage.setItem(TOKEN_EXPIRE_KEY, expireTime.toString())
 }
 

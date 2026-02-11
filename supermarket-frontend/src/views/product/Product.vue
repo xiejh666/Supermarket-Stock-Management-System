@@ -11,7 +11,13 @@
         </div>
       </div>
       <div class="header-actions">
-        <el-button v-if="canCreate('product')" type="primary" :icon="Plus" @click="handleAdd">新增商品</el-button>
+        <el-button
+          v-if="canCreate('product')"
+          type="primary"
+          :icon="Plus"
+          @click="handleAdd"
+          class="glass-btn primary"
+        >新增商品</el-button>
       </div>
     </el-card>
 
@@ -41,8 +47,8 @@
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
-          <el-button :icon="RefreshLeft" @click="handleReset">重置</el-button>
+          <el-button type="primary" :icon="Search" @click="handleSearch" class="glass-btn primary">查询</el-button>
+          <el-button :icon="RefreshLeft" @click="handleReset" class="glass-btn plain">重置</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -629,26 +635,37 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .product-container {
-  padding: 20px;
+  padding: 0;
+
+  :deep(.el-card) {
+    border-radius: 20px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 8px 32px -12px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.8);
+  }
 
   .page-header {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
     position: relative;
+    border: none;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
 
     .header-content {
       .title-section {
         h2 {
           margin: 0 0 8px 0;
           font-size: 24px;
-          font-weight: 600;
+          font-weight: 800;
+          color: #1e293b;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 12px;
         }
 
         .subtitle {
           margin: 0;
-          color: #909399;
+          color: #64748b;
           font-size: 14px;
         }
       }
@@ -657,83 +674,89 @@ onMounted(() => {
     .header-actions {
       position: absolute;
       top: 50%;
-      right: 20px;
+      right: 24px;
       transform: translateY(-50%);
     }
   }
 
   .toolbar {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+    padding: 4px;
+    
+    :deep(.el-form-item) {
+      margin-bottom: 0;
+      margin-right: 18px;
+    }
+
+    :deep(.el-input__wrapper),
+    :deep(.el-select__wrapper) {
+      border-radius: 12px;
+      background: rgba(248, 250, 252, 0.8);
+      box-shadow: none !important;
+      border: 1px solid #e2e8f0;
+    }
   }
 
   .table-card {
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  }
-
-  .product-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .product-name {
-    font-weight: 500;
+    padding: 8px;
+    
+    :deep(.el-table) {
+      --el-table-border-color: #f1f5f9;
+      --el-table-header-bg-color: #f8fafc;
+      border-radius: 12px;
+      overflow: hidden;
+    }
   }
 
   .price {
     font-weight: 600;
-    color: #606266;
+    color: #64748b;
     
     &.primary {
-      color: #409eff;
-      font-size: 16px;
+      color: #2563eb;
+      font-size: 15px;
+    }
+  }
+}
+
+/* 玻璃感按钮样式 */
+.glass-btn {
+  border-radius: 12px;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+  backdrop-filter: blur(4px);
+  padding: 8px 20px;
+  height: 38px;
+
+  &.primary {
+    background: rgba(59, 130, 246, 0.1) !important;
+    border-color: rgba(59, 130, 246, 0.2) !important;
+    color: #2563eb !important;
+
+    &:hover {
+      background: rgba(59, 130, 246, 0.18) !important;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px -4px rgba(59, 130, 246, 0.2);
     }
   }
 
-  :deep(.el-pagination) {
-    margin-top: 24px;
-    justify-content: center;
-  }
+  &.plain {
+    background: rgba(241, 245, 249, 0.8) !important;
+    border-color: #e2e8f0 !important;
+    color: #475569 !important;
 
-  // 商品图片上传样式
-  .product-image-uploader {
-    :deep(.el-upload) {
-      border: 1px dashed #d9d9d9;
-      border-radius: 6px;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-      transition: all 0.3s;
-      width: 178px;
-      height: 178px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      &:hover {
-        border-color: #409eff;
-      }
-    }
-
-    .product-image {
-      width: 178px;
-      height: 178px;
-      display: block;
-      object-fit: cover;
-    }
-
-    .image-uploader-icon {
-      font-size: 28px;
-      color: #8c939d;
-      text-align: center;
+    &:hover {
+      background: #f1f5f9 !important;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.05);
     }
   }
+}
 
-  .upload-tip {
-    font-size: 12px;
-    color: #909399;
-    margin-top: 8px;
-  }
+:deep(.el-pagination) {
+  margin-top: 24px;
+  justify-content: center;
 }
 </style>
 

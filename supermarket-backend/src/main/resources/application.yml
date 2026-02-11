@@ -71,7 +71,7 @@ logging:
 
 jwt:
   secret: supermarket-secret-key-for-jwt-token-generation-2024-with-extra-length-to-meet-hs512-requirements
-  expiration: 900000
+  expiration: 86400000
 
 # 阿里云OSS配置
 oss:

@@ -1,6 +1,6 @@
 <template>
-  <div class="settings-container">
-    <el-card class="settings-header">
+  <div class="settings-container glass-page">
+    <el-card class="settings-header page-header">
       <div class="header-content">
         <div class="title-section">
           <h2>
@@ -14,13 +14,13 @@
 
     <el-row :gutter="20">
       <el-col :span="24">
-        <el-card>
-          <el-tabs v-model="activeTab" tab-position="left">
+        <el-card class="main-settings-card">
+          <el-tabs v-model="activeTab" tab-position="left" class="custom-tabs">
             <!-- 基本设置 -->
             <el-tab-pane label="基本设置" name="basic">
               <div class="settings-section">
                 <h3 class="section-title">系统信息</h3>
-                <el-form label-width="120px">
+                <el-form label-width="120px" class="settings-form">
                   <el-form-item label="系统名称">
                     <el-input 
                       v-model="settings.systemName" 
@@ -30,7 +30,7 @@
                     />
                   </el-form-item>
                   <el-form-item label="系统版本">
-                    <el-tag type="success">v1.0.0</el-tag>
+                    <el-tag type="success" effect="light" class="round-tag">v1.0.0</el-tag>
                   </el-form-item>
                   <el-form-item label="系统描述">
                     <el-input
@@ -42,13 +42,11 @@
                       :disabled="!isAdmin"
                     />
                   </el-form-item>
-                  <el-form-item v-if="isAdmin">
-                    <el-button type="primary" @click="handleSave">保存设置</el-button>
-                    <el-button @click="loadSettings">重置</el-button>
+                  <el-form-item v-if="isAdmin" class="form-actions">
+                    <el-button type="primary" @click="handleSave" class="glass-btn primary">保存设置</el-button>
+                    <el-button @click="loadSettings" class="glass-btn plain">重置</el-button>
                   </el-form-item>
-                  <el-alert v-else type="info" :closable="false" style="max-width: 400px;">
-                    仅管理员可修改系统基本设置
-                  </el-alert>
+                  <el-alert v-else type="info" :closable="false" show-icon style="max-width: 400px;" title="仅管理员可修改系统基本设置" />
                 </el-form>
               </div>
             </el-tab-pane>
@@ -58,30 +56,30 @@
               <div class="settings-section">
                 <h3 class="section-title">消息通知</h3>
                 <div class="notification-list">
-                  <div class="notification-item">
+                  <div class="notification-item glass-item">
                     <div class="notification-info">
                       <div class="notification-title">
-                        <el-icon color="#409eff"><Bell /></el-icon>
+                        <el-icon color="#3b82f6"><Bell /></el-icon>
                         库存预警通知
                       </div>
                       <div class="notification-desc">当商品库存低于预警值时发送通知</div>
                     </div>
                     <el-switch v-model="settings.inventoryWarning" :disabled="!isAdmin" />
                   </div>
-                  <div class="notification-item">
+                  <div class="notification-item glass-item">
                     <div class="notification-info">
                       <div class="notification-title">
-                        <el-icon color="#67c23a"><Document /></el-icon>
+                        <el-icon color="#10b981"><Document /></el-icon>
                         订单审核通知
                       </div>
                       <div class="notification-desc">有新的采购订单待审核时发送通知</div>
                     </div>
                     <el-switch v-model="settings.orderAudit" :disabled="!isAdmin" />
                   </div>
-                  <div class="notification-item">
+                  <div class="notification-item glass-item">
                     <div class="notification-info">
                       <div class="notification-title">
-                        <el-icon color="#e6a23c"><InfoFilled /></el-icon>
+                        <el-icon color="#f59e0b"><InfoFilled /></el-icon>
                         系统公告通知
                       </div>
                       <div class="notification-desc">系统发布重要公告时发送通知</div>
@@ -89,14 +87,10 @@
                     <el-switch v-model="settings.systemNotice" :disabled="!isAdmin" />
                   </div>
                 </div>
-                <el-form label-width="120px" style="margin-top: 20px;">
-                  <el-form-item v-if="isAdmin">
-                    <el-button type="primary" @click="handleSave">保存设置</el-button>
-                  </el-form-item>
-                  <el-alert v-else type="info" :closable="false">
-                    仅管理员可修改通知设置
-                  </el-alert>
-                </el-form>
+                <div v-if="isAdmin" style="margin-top: 32px; padding-left: 20px;">
+                  <el-button type="primary" @click="handleSave" class="glass-btn primary">保存设置</el-button>
+                </div>
+                <el-alert v-else type="info" :closable="false" show-icon style="margin-top: 20px;" title="仅管理员可修改通知设置" />
               </div>
             </el-tab-pane>
 
@@ -104,47 +98,45 @@
             <el-tab-pane label="安全设置" name="security">
               <div class="settings-section">
                 <h3 class="section-title">账号安全</h3>
-                <el-form label-width="150px">
+                <el-form label-width="150px" class="settings-form">
                   <el-form-item label="密码过期时间">
                     <el-input-number 
                       v-model="settings.passwordExpireDays" 
                       :min="30" 
                       :max="365"
-                      style="width: 200px"
+                      style="width: 180px"
                       :disabled="!isAdmin"
                     />
-                    <span class="form-tip">天（建议90天）</span>
+                    <span class="form-tip">天（建议 90 天）</span>
                   </el-form-item>
                   <el-form-item label="登录失败锁定次数">
                     <el-input-number 
                       v-model="settings.loginFailTimes" 
                       :min="3" 
                       :max="10"
-                      style="width: 200px"
+                      style="width: 180px"
                       :disabled="!isAdmin"
                     />
-                    <span class="form-tip">次（建议5次）</span>
+                    <span class="form-tip">次（建议 5 次）</span>
                   </el-form-item>
                   <el-form-item label="会话超时时间">
                     <el-input-number 
                       v-model="settings.sessionTimeout" 
                       :min="10" 
                       :max="120"
-                      style="width: 200px"
+                      style="width: 180px"
                       :disabled="!isAdmin"
                     />
-                    <span class="form-tip">分钟（建议30分钟）</span>
+                    <span class="form-tip">分钟（建议 30 分钟）</span>
                   </el-form-item>
                   <el-form-item label="强密码策略">
                     <el-switch v-model="settings.strongPassword" :disabled="!isAdmin" />
                     <span class="form-tip">启用后密码必须包含大小写字母、数字和特殊字符</span>
                   </el-form-item>
-                  <el-form-item v-if="isAdmin">
-                    <el-button type="primary" @click="handleSave">保存设置</el-button>
+                  <el-form-item v-if="isAdmin" class="form-actions">
+                    <el-button type="primary" @click="handleSave" class="glass-btn primary">保存设置</el-button>
                   </el-form-item>
-                  <el-alert v-else type="info" :closable="false" style="max-width: 500px;">
-                    仅管理员可修改安全设置
-                  </el-alert>
+                  <el-alert v-else type="info" :closable="false" show-icon style="max-width: 500px;" title="仅管理员可修改安全设置" />
                 </el-form>
               </div>
             </el-tab-pane>
@@ -155,9 +147,11 @@
                 <h3 class="section-title">系统信息</h3>
                 <div class="about-content">
                   <div class="about-logo">
-                    <el-icon :size="80" color="#409eff"><ShoppingCart /></el-icon>
+                    <div class="logo-wrapper">
+                      <el-icon :size="60" color="#3b82f6"><ShoppingCart /></el-icon>
+                    </div>
                   </div>
-                  <h2>{{ systemStore.systemName || '超市进销存管理系统' }}</h2>
+                  <h2 class="system-name">{{ systemStore.systemName || '超市进销存管理系统' }}</h2>
                   <p class="version">版本：v1.0.0</p>
                   <p class="description">
                     {{ systemStore.systemDescription || '专业的超市进销存管理解决方案，提供商品、采购、销售、库存全流程管理' }}
@@ -167,21 +161,25 @@
                   
                   <div class="tech-stack">
                     <h4>技术栈</h4>
-                    <el-row :gutter="10">
+                    <el-row :gutter="20">
                       <el-col :span="12">
-                        <div class="tech-item">
+                        <div class="tech-item glass-item">
                           <strong>前端：</strong>
-                          <el-tag size="small" style="margin-left: 5px;">Vue 3</el-tag>
-                          <el-tag size="small" style="margin-left: 5px;">Element Plus</el-tag>
-                          <el-tag size="small" style="margin-left: 5px;">Vite</el-tag>
+                          <div class="tags-row">
+                            <el-tag size="small" effect="light">Vue 3</el-tag>
+                            <el-tag size="small" effect="light">Element Plus</el-tag>
+                            <el-tag size="small" effect="light">Vite</el-tag>
+                          </div>
                         </div>
                       </el-col>
                       <el-col :span="12">
-                        <div class="tech-item">
+                        <div class="tech-item glass-item">
                           <strong>后端：</strong>
-                          <el-tag size="small" style="margin-left: 5px;">Spring Boot</el-tag>
-                          <el-tag size="small" style="margin-left: 5px;">MyBatis Plus</el-tag>
-                          <el-tag size="small" style="margin-left: 5px;">MySQL</el-tag>
+                          <div class="tags-row">
+                            <el-tag size="small" effect="light">Spring Boot</el-tag>
+                            <el-tag size="small" effect="light">MyBatis Plus</el-tag>
+                            <el-tag size="small" effect="light">MySQL</el-tag>
+                          </div>
                         </div>
                       </el-col>
                     </el-row>
@@ -190,9 +188,7 @@
                   <el-divider />
                   
                   <div class="copyright">
-                    <p>开发团队：超市管理系统开发组</p>
-                    <p>许可证：MIT License</p>
-                    <p>© 2024 超市进销存管理系统. All Rights Reserved.</p>
+                    <p class="team">开发团队：xiejh666</p>
                   </div>
                 </div>
               </div>
@@ -282,85 +278,157 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
+@use "@/styles/glass-theme.scss" as *;
+
 .settings-container {
-  padding: 20px;
+  padding: 0;
   
   .settings-header {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+    border: none;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
     
-    .header-content {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      
-      .title-section {
-        h2 {
-          margin: 0;
-          font-size: 24px;
-          color: #303133;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        
-        .subtitle {
-          margin: 8px 0 0 0;
-          color: #909399;
-          font-size: 14px;
-        }
+    .title-section {
+      h2 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 800;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 12px;
       }
+      
+      .subtitle {
+        margin: 8px 0 0 0;
+        color: #64748b;
+        font-size: 14px;
+      }
+    }
+  }
+
+  .main-settings-card {
+    border-radius: 20px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 8px 32px -12px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.8);
+    
+    :deep(.el-card__body) {
+      padding: 0;
+    }
+  }
+  
+  .custom-tabs {
+    height: 600px;
+    
+    :deep(.el-tabs__header) {
+      margin-right: 0;
+      background: rgba(248, 250, 252, 0.4);
+      border-right: 1px solid rgba(226, 232, 240, 0.6);
+      padding: 20px 0;
+    }
+
+    :deep(.el-tabs__nav-wrap::after) {
+      display: none;
+    }
+
+    :deep(.el-tabs__item) {
+      height: 54px;
+      line-height: 54px;
+      padding: 0 32px;
+      font-weight: 600;
+      color: #64748b;
+      font-size: 15px;
+      transition: all 0.3s;
+
+      &.is-active {
+        color: #3b82f6;
+        background: rgba(59, 130, 246, 0.06);
+      }
+    }
+
+    :deep(.el-tabs__active-bar) {
+      width: 3px;
+      border-radius: 3px;
+    }
+
+    :deep(.el-tabs__content) {
+      padding: 10px;
+      overflow-y: auto;
     }
   }
   
   .settings-section {
-    padding: 20px;
+    padding: 30px 40px;
     
     .section-title {
-      margin: 0 0 20px 0;
+      margin: 0 0 24px 0;
       font-size: 18px;
-      color: #303133;
-      padding-bottom: 10px;
-      border-bottom: 1px solid #EBEEF5;
+      font-weight: 700;
+      color: #1e293b;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.6);
     }
     
     .form-tip {
-      margin-left: 10px;
-      color: #909399;
-      font-size: 12px;
+      margin-left: 12px;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+  }
+
+  .settings-form {
+    .form-actions {
+      margin-top: 40px;
     }
   }
   
+  .glass-item {
+    background: rgba(248, 250, 252, 0.6);
+    border: 1px solid rgba(226, 232, 240, 0.6);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.9);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.08);
+    }
+  }
+
   .notification-list {
     .notification-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 20px;
-      margin-bottom: 15px;
-      background: #f5f7fa;
-      border-radius: 8px;
-      transition: all 0.3s;
-      
-      &:hover {
-        background: #ecf5ff;
-      }
       
       .notification-info {
         flex: 1;
         
         .notification-title {
-          font-size: 16px;
-          color: #303133;
-          font-weight: 500;
-          margin-bottom: 8px;
+          font-size: 15px;
+          color: #1e293b;
+          font-weight: 700;
+          margin-bottom: 4px;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
+
+          .el-icon {
+            padding: 8px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
+          }
         }
         
         .notification-desc {
-          color: #606266;
-          font-size: 14px;
+          color: #64748b;
+          font-size: 13px;
+          padding-left: 42px;
         }
       }
     }
@@ -368,28 +436,39 @@ onMounted(() => {
   
   .about-content {
     text-align: center;
-    padding: 40px;
+    padding: 20px 0;
     
     .about-logo {
-      margin-bottom: 20px;
+      margin-bottom: 24px;
+      
+      .logo-wrapper {
+        display: inline-flex;
+        padding: 20px;
+        background: rgba(59, 130, 246, 0.06);
+        border-radius: 24px;
+        border: 1px solid rgba(59, 130, 246, 0.1);
+      }
     }
     
-    h2 {
-      margin: 10px 0;
-      color: #303133;
+    .system-name {
+      margin: 12px 0;
+      font-size: 24px;
+      font-weight: 800;
+      color: #1e293b;
     }
     
     .version {
-      color: #909399;
+      color: #94a3b8;
       font-size: 14px;
-      margin: 10px 0;
+      margin-bottom: 16px;
+      font-weight: 600;
     }
     
     .description {
-      color: #606266;
+      color: #64748b;
       font-size: 14px;
       margin: 20px auto;
-      max-width: 600px;
+      max-width: 500px;
       line-height: 1.8;
     }
     
@@ -399,28 +478,56 @@ onMounted(() => {
       margin: 0 auto;
       
       h4 {
-        margin-bottom: 15px;
-        color: #303133;
+        margin-bottom: 16px;
+        color: #1e293b;
+        font-weight: 700;
+        text-align: center;
       }
       
       .tech-item {
-        margin-bottom: 15px;
-        
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+
         strong {
-          color: #606266;
+          color: #475569;
+          font-size: 14px;
+        }
+
+        .tags-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
         }
       }
     }
     
     .copyright {
-      margin-top: 30px;
-      color: #909399;
-      font-size: 12px;
+      margin-top: 40px;
+      color: #94a3b8;
+      font-size: 13px;
       
       p {
-        margin: 8px 0;
+        margin: 10px 0;
+      }
+
+      .team {
+        color: #475569;
+        font-weight: 700;
+        font-size: 14px;
+      }
+
+      .footer-copy {
+        font-size: 12px;
+        opacity: 0.8;
       }
     }
   }
+}
+
+.round-tag {
+  border-radius: 8px;
+  font-weight: 600;
 }
 </style>

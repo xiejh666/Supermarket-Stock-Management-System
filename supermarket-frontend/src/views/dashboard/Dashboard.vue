@@ -6,7 +6,7 @@
         <el-icon><TrendCharts /></el-icon>
         数据仪表盘
       </h1>
-      <el-button type="primary" :icon="Refresh" @click="refreshData" :loading="loading">
+      <el-button type="primary" :icon="Refresh" @click="refreshData" :loading="loading" class="glass-btn">
         刷新数据
       </el-button>
     </div>
@@ -15,17 +15,17 @@
     <el-row :gutter="24" class="stats-row">
       <el-col :xs="12" :sm="12" :md="6" v-for="(stat, index) in stats" :key="index">
         <div 
-          class="stat-card card hover-lift" 
-          :class="`fade-in-up delay-${index + 1}`"
-          :style="{ background: stat.gradient, cursor: stat.clickable ? 'pointer' : 'default' }"
+          class="stat-card glass-card hover-lift" 
+          :class="[`fade-in-up delay-${index + 1}`, `stat-variant-${index}`]"
+          :style="{ cursor: stat.clickable ? 'pointer' : 'default' }"
           @click="handleStatCardClick(stat)"
         >
           <div class="stat-icon">
             <component :is="stat.icon" />
           </div>
           <div class="stat-content">
-            <div class="stat-value number-roll">{{ stat.value }}</div>
             <div class="stat-label">{{ stat.label }}</div>
+            <div class="stat-value number-roll">{{ stat.value }}</div>
           </div>
           <div class="stat-trend" :class="stat.trend">
             <el-icon><CaretTop v-if="stat.trend === 'up'" /><CaretBottom v-else /></el-icon>
@@ -188,9 +188,9 @@
                 :total="activities.length"
                 :page-sizes="[6, 12, 18, 24]"
                 layout="total, sizes, prev, pager, next, jumper"
-                background
                 @size-change="handleActivityPageChange"
                 @current-change="handleActivityPageChange"
+                style="margin-top: 20px; justify-content: center;"
               />
             </div>
           </div>
@@ -255,7 +255,7 @@ const stats = ref([
     change: '+12.5',
     trend: 'up',
     icon: Money,
-    gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    gradient: '',
     clickable: false
   },
   {
@@ -264,7 +264,7 @@ const stats = ref([
     change: '+8.3',
     trend: 'up',
     icon: ShoppingBag,
-    gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    gradient: '',
     clickable: false
   },
   {
@@ -273,7 +273,7 @@ const stats = ref([
     change: '-2.1',
     trend: 'down',
     icon: Box,
-    gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+    gradient: '',
     clickable: true,
     route: '/inventory',
     query: { filter: 'low' }
@@ -284,7 +284,7 @@ const stats = ref([
     change: '+5.4',
     trend: 'up',
     icon: UserFilled,
-    gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+    gradient: '',
     clickable: true,
     route: '/purchase',
     query: { filter: 'pending' }
@@ -1138,66 +1138,106 @@ onBeforeUnmount(() => {
   margin-bottom: 24px;
 }
 
-.stat-card {
+/* 统计卡片重构为浅色玻璃感风格 + 区分颜色 */
+.glass-card {
   position: relative;
-  padding: 24px;
-  color: white;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  height: 140px;
+  padding: 20px;
+  border-radius: 18px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start; /* 改为从顶部开始布局，防止挤压 */
+  min-height: 150px; /* 增加最小高度防止内容遮挡 */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: visible; /* 允许趋势标签等微溢出 */
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+/* 恢复每个卡片各自的浅色玻璃背景 */
+.stat-variant-0 { background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.08) 100%); }
+.stat-variant-1 { background: linear-gradient(135deg, rgba(240, 147, 251, 0.12) 0%, rgba(245, 87, 108, 0.08) 100%); }
+.stat-variant-2 { background: linear-gradient(135deg, rgba(79, 172, 254, 0.12) 0%, rgba(0, 242, 254, 0.08) 100%); }
+.stat-variant-3 { background: linear-gradient(135deg, rgba(67, 233, 123, 0.12) 0%, rgba(56, 249, 215, 0.08) 100%); }
+
+.stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin-bottom: 12px;
   transition: all 0.3s ease;
 }
 
-.stat-card[style*="cursor: pointer"]:hover {
-  transform: translateY(-5px) scale(1.02);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
-}
-
-.stat-card[style*="cursor: pointer"]:active {
-  transform: translateY(-2px) scale(1.01);
-}
-
-.stat-icon {
-  font-size: 48px;
-  opacity: 0.3;
-  position: absolute;
-  right: 20px;
-  top: 20px;
-}
+.stat-variant-0 .stat-icon { color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+.stat-variant-1 .stat-icon { color: #ec4899; background: rgba(236, 72, 153, 0.1); }
+.stat-variant-2 .stat-icon { color: #06b6d4; background: rgba(6, 182, 212, 0.1); }
+.stat-variant-3 .stat-icon { color: #10b981; background: rgba(16, 185, 129, 0.1); }
 
 .stat-content {
   z-index: 1;
-}
-
-.stat-value {
-  font-size: 32px;
-  font-weight: 700;
-  margin-bottom: 8px;
+  flex: 1;
 }
 
 .stat-label {
-  font-size: 14px;
-  opacity: 0.9;
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 24px; /* 稍微缩小字号，防止溢出 */
+  font-weight: 800;
+  color: #1e293b;
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+  line-height: 1.2;
 }
 
 .stat-trend {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
-  z-index: 1;
+  padding: 2px 8px;
+  border-radius: 6px;
+  width: fit-content;
+  margin-top: auto; /* 推到底部 */
 }
 
 .stat-trend.up {
-  color: #fff;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
 }
 
 .stat-trend.down {
-  color: #fed7d7;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+/* 刷新按钮玻璃感样式 */
+.glass-btn {
+  background: rgba(59, 130, 246, 0.08) !important;
+  border: 1px solid rgba(59, 130, 246, 0.2) !important;
+  color: #2563eb !important;
+  backdrop-filter: blur(8px);
+  font-weight: 600;
+  transition: all 0.3s ease !important;
+}
+
+.glass-btn:hover {
+  background: rgba(59, 130, 246, 0.15) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px -4px rgba(59, 130, 246, 0.2);
+}
+
+.glass-btn:active {
+  transform: translateY(0);
 }
 
 /* 图表区域 */
@@ -1587,24 +1627,28 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: center;
   padding: 24px 0 12px 0;
-  border-top: 1px solid #f3f4f6;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
   margin-top: 20px;
 }
 
 .activity-pagination :deep(.el-pagination) {
-  gap: 8px;
+  --el-pagination-button-bg-color: transparent;
+  --el-pagination-hover-color: #3b82f6;
 }
 
-.activity-pagination :deep(.el-pagination.is-background .btn-prev),
-.activity-pagination :deep(.el-pagination.is-background .btn-next),
-.activity-pagination :deep(.el-pagination.is-background .el-pager li) {
-  border-radius: 6px;
+.activity-pagination :deep(.el-pager li) {
+  background: transparent !important;
+  border: none !important;
   font-weight: 500;
+  color: #64748b;
 }
 
-.activity-pagination :deep(.el-pagination.is-background .el-pager li:not(.is-disabled).is-active) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.activity-pagination :deep(.el-pager li.is-active) {
+  color: #2563eb !important;
+  font-weight: 700;
+  background: transparent !important;
 }
+
 
 
 /* 响应式 */

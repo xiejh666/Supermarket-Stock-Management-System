@@ -1,5 +1,5 @@
 <template>
-  <div class="purchase-container">
+  <div class="purchase-container glass-page">
     <el-card class="page-header">
       <div class="header-content">
         <div class="title-section">
@@ -8,7 +8,12 @@
         </div>
       </div>
       <div class="header-actions">
-        <el-button v-if="canCreate('purchase')" type="primary" @click="handleAdd">
+        <el-button
+          v-if="canCreate('purchase')"
+          type="primary"
+          @click="handleAdd"
+          class="glass-btn primary"
+        >
           <el-icon><Plus /></el-icon>
           新增采购单
         </el-button>
@@ -55,8 +60,8 @@
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
-          <el-button :icon="RefreshLeft" @click="handleReset">重置</el-button>
+          <el-button type="primary" :icon="Search" @click="handleSearch" class="glass-btn primary">查询</el-button>
+          <el-button :icon="RefreshLeft" @click="handleReset" class="glass-btn plain">重置</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -637,45 +642,52 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
+@use "@/styles/glass-theme.scss" as *;
+
 .purchase-container {
-  padding: 20px;
+  &.glass-page {
+  }
 
   .page-header {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
     position: relative;
+    border: none;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
 
-    .header-content {
-      .title-section {
-        h2 {
-          margin: 0 0 8px 0;
-          font-size: 24px;
-          font-weight: 600;
-        }
+    .title-section {
+      h2 {
+        margin: 0 0 8px 0;
+        font-size: 24px;
+        font-weight: 800;
+        color: #1e293b;
+      }
 
-        .subtitle {
-          margin: 0;
-          color: #909399;
-          font-size: 14px;
-        }
+      .subtitle {
+        margin: 0;
+        color: #64748b;
+        font-size: 14px;
       }
     }
 
     .header-actions {
       position: absolute;
       top: 50%;
-      right: 20px;
+      right: 24px;
       transform: translateY(-50%);
     }
   }
 
+  .toolbar {
+    margin-bottom: 24px;
+  }
+
   .table-card {
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+    padding: 8px;
   }
 
   .amount {
-    color: #f56c6c;
-    font-weight: bold;
+    color: #ef4444;
+    font-weight: 700;
   }
 }
 </style>
-

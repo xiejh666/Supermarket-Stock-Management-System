@@ -1,18 +1,47 @@
 <template>
-  <div class="user-container">
+  <div class="user-container glass-page">
+    <!-- 标题卡片 -->
     <el-card class="page-header">
       <div class="header-content">
         <div class="title-section">
-          <h2>👥 用户管理</h2>
-          <p class="subtitle">管理系统用户信息</p>
+          <h2>👤 用户管理</h2>
+          <p class="subtitle">系统用户及权限管理</p>
         </div>
       </div>
       <div class="header-actions">
-        <el-button type="primary" @click="handleAdd">
+        <el-button
+          v-if="canCreate('user')"
+          type="primary"
+          @click="handleAdd"
+          class="glass-btn primary"
+        >
           <el-icon><Plus /></el-icon>
           新增用户
         </el-button>
       </div>
+    </el-card>
+
+    <!-- 搜索卡片 -->
+    <el-card class="search-card toolbar">
+      <el-form :inline="true" :model="searchForm">
+        <el-form-item label="用户名">
+          <el-input v-model="searchForm.username" placeholder="请输入用户名" clearable @keyup.enter="handleSearch" style="width: 180px;" />
+        </el-form-item>
+        <el-form-item label="真实姓名">
+          <el-input v-model="searchForm.realName" placeholder="请输入姓名" clearable @keyup.enter="handleSearch" style="width: 180px;" />
+        </el-form-item>
+        <el-form-item label="角色">
+          <el-select v-model="searchForm.roleCode" placeholder="全部" clearable style="width: 150px;">
+            <el-option label="管理员" value="ADMIN" />
+            <el-option label="收银员" value="CASHIER" />
+            <el-option label="库管员" value="WAREHOUSE" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="handleSearch" class="glass-btn primary">查询</el-button>
+          <el-button @click="handleReset" class="glass-btn plain">重置</el-button>
+        </el-form-item>
+      </el-form>
     </el-card>
 
     <el-card class="table-card">
@@ -20,31 +49,43 @@
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="username" label="用户名" />
         <el-table-column prop="realName" label="真实姓名" />
-        <el-table-column prop="phone" label="手机号" />
-        <el-table-column label="角色" width="120">
-          <template #default="{ row }">
-            <el-tag :type="row.roleCode === 'ADMIN' ? 'danger' : 'success'">
-              {{ row.roleName || '未分配' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="100">
+        <el-table-column prop="roleName" label="角色" />
+        <el-table-column prop="phone" label="联系电话" />
+        <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-switch
               v-model="row.status"
               :active-value="1"
               :inactive-value="0"
-              :before-change="() => beforeStatusChange(row)"
               @change="handleStatusChange(row)"
+              :disabled="row.roleCode === 'ADMIN'"
             />
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="180" />
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link @click="handleEdit(row)">编辑</el-button>
-            <el-button type="warning" link @click="handleResetPassword(row)">重置密码</el-button>
-            <el-button type="danger" link @click="handleDelete(row)">删除</el-button>
+            <el-button 
+              v-if="canUpdate('user')" 
+              type="primary" 
+              link 
+              @click="() => checkPermission('update', 'user', () => handleEdit(row))">
+              编辑
+            </el-button>
+            <el-button 
+              v-if="canUpdate('user')" 
+              type="warning" 
+              link 
+              @click="handleResetPwd(row)">
+              重置密码
+            </el-button>
+            <el-button 
+              v-if="canDelete('user') && row.roleCode !== 'ADMIN'" 
+              type="danger" 
+              link 
+              @click="() => checkPermission('delete', 'user', () => handleDelete(row))">
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -65,30 +106,24 @@
     <el-dialog
       v-model="dialogVisible"
       :title="dialogTitle"
-      width="600px"
+      width="500px"
     >
       <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
         <el-form-item label="用户名" prop="username">
           <el-input v-model="form.username" placeholder="请输入用户名" :disabled="!!form.id" />
         </el-form-item>
-        <el-form-item label="密码" prop="password" v-if="!form.id">
-          <el-input v-model="form.password" type="password" placeholder="请输入密码" show-password />
-        </el-form-item>
         <el-form-item label="真实姓名" prop="realName">
           <el-input v-model="form.realName" placeholder="请输入真实姓名" />
         </el-form-item>
-        <el-form-item label="手机号" prop="phone">
-          <el-input v-model="form.phone" placeholder="请输入手机号" />
-        </el-form-item>
-        <el-form-item label="角色" prop="roleId">
-          <el-select v-model="form.roleId" placeholder="请选择角色" style="width: 100%">
-            <el-option
-              v-for="role in roleList"
-              :key="role.id"
-              :label="role.roleName"
-              :value="role.id"
-            />
+        <el-form-item label="角色" prop="roleCode">
+          <el-select v-model="form.roleCode" placeholder="请选择角色" style="width: 100%">
+            <el-option label="管理员" value="ADMIN" />
+            <el-option label="收银员" value="CASHIER" />
+            <el-option label="库管员" value="WAREHOUSE" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="联系电话" prop="phone">
+          <el-input v-model="form.phone" placeholder="请输入联系电话" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -103,16 +138,21 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { useRouter } from 'vue-router'
-import { useUserStore } from '@/store/user'
 import userApi from '@/api/user'
-import { getRoleList } from '@/api/role'
+import { canCreate, canUpdate, canDelete, checkPermission } from '@/utils/permission'
+import { useUserStore } from '@/store/user'
 
+const userStore = useUserStore()
 const userList = ref([])
-const roleList = ref([])
 const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+
+const searchForm = ref({
+  username: '',
+  realName: '',
+  roleCode: ''
+})
 
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增用户')
@@ -120,45 +160,45 @@ const formRef = ref(null)
 const form = ref({
   id: null,
   username: '',
-  password: '',
   realName: '',
-  phone: '',
-  roleId: null
+  roleCode: '',
+  phone: ''
 })
 
 const rules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { pattern: /^[a-zA-Z0-9_]+$/, message: '用户名只能包含英文字母、数字和下划线', trigger: 'blur' },
-    { min: 3, message: '用户名长度不能少于3位', trigger: 'blur' },
-    { max: 20, message: '用户名长度不能超过20位', trigger: 'blur' }
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
-  ],
-  realName: [
-    { required: true, message: '请输入真实姓名', trigger: 'blur' }
-  ],
-  phone: [
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
-  ],
-  roleId: [
-    { required: true, message: '请选择角色', trigger: 'change' }
-  ]
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  realName: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }],
+  roleCode: [{ required: true, message: '请选择角色', trigger: 'change' }]
 }
 
 const loadData = async () => {
   try {
     const { data } = await userApi.getList({
       current: pageNum.value,
-      size: pageSize.value
+      size: pageSize.value,
+      username: searchForm.value.username,
+      realName: searchForm.value.realName,
+      roleCode: searchForm.value.roleCode
     })
     userList.value = data.records
     total.value = data.total
   } catch (error) {
     ElMessage.error('加载数据失败')
   }
+}
+
+const handleSearch = () => {
+  pageNum.value = 1
+  loadData()
+}
+
+const handleReset = () => {
+  searchForm.value = {
+    username: '',
+    realName: '',
+    roleCode: ''
+  }
+  handleSearch()
 }
 
 const handlePageChange = () => {
@@ -170,10 +210,9 @@ const handleAdd = () => {
   form.value = {
     id: null,
     username: '',
-    password: '',
     realName: '',
-    phone: '',
-    roleId: null
+    roleCode: '',
+    phone: ''
   }
   dialogVisible.value = true
 }
@@ -184,158 +223,109 @@ const handleEdit = (row) => {
   dialogVisible.value = true
 }
 
+const handleStatusChange = async (row) => {
+  try {
+    const currentUserId = userStore.userInfo?.userId || userStore.userInfo?.id
+    await userApi.updateStatus(row.id, row.status, currentUserId)
+    ElMessage.success('操作成功')
+  } catch (error) {
+    row.status = row.status === 1 ? 0 : 1
+    ElMessage.error('操作失败')
+  }
+}
+
+const handleResetPwd = async (row) => {
+  try {
+    await ElMessageBox.confirm('确定要重置该用户的密码为 123456 吗？', '提示', {
+      type: 'warning'
+    })
+    const currentUserId = userStore.userInfo?.userId || userStore.userInfo?.id
+    await userApi.resetPassword(row.id, currentUserId)
+    ElMessage.success('密码已重置为 123456')
+  } catch (error) {
+    if (error !== 'cancel') ElMessage.error('操作失败')
+  }
+}
+
 const handleSubmit = async () => {
   await formRef.value.validate()
   try {
+    const currentUserId = userStore.userInfo?.userId || userStore.userInfo?.id
     if (form.value.id) {
-      await userApi.update(form.value)
+      await userApi.update(form.value, currentUserId)
       ElMessage.success('更新成功')
     } else {
-      await userApi.create(form.value)
+      await userApi.create(form.value, currentUserId)
       ElMessage.success('创建成功')
     }
     dialogVisible.value = false
     loadData()
   } catch (error) {
-    ElMessage.error('操作失败')
-  }
-}
-
-const router = useRouter()
-const userStore = useUserStore()
-
-// 状态改变前的检查
-const beforeStatusChange = async (row) => {
-  const currentUser = userStore.userInfo
-  const newStatus = row.status === 1 ? 0 : 1 // 即将变成的状态
-  const currentUserId = currentUser?.userId || currentUser?.id // 兼容userId和id
-  
-  // 如果是禁用操作且是当前登录用户
-  if (newStatus === 0 && currentUser && currentUserId === row.id) {
-    try {
-      await ElMessageBox.confirm(
-        '您正在禁用当前登录的账号，操作后将强制退出登录，是否继续？',
-        '警告',
-        {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning'
-        }
-      )
-      return true // 允许状态改变
-    } catch (error) {
-      return false // 阻止状态改变
-    }
-  }
-  
-  return true // 允许状态改变
-}
-
-// 状态改变后的处理
-const handleStatusChange = async (row) => {
-  const currentUser = userStore.userInfo
-  const currentUserId = currentUser?.userId || currentUser?.id // 兼容userId和id
-  
-  try {
-    // 调用API更新状态
-    await userApi.updateStatus(row.id, row.status)
-    
-    // 如果是禁用当前登录用户
-    if (row.status === 0 && currentUser && currentUserId === row.id) {
-      ElMessage.success('账号已禁用，即将退出登录...')
-      
-      // 延迟1秒后强制退出登录
-      setTimeout(async () => {
-        await userStore.logout()
-        router.push('/login')
-      }, 1000)
-    } else {
-      ElMessage.success('状态更新成功')
-    }
-  } catch (error) {
-    console.error('状态更新失败:', error)
-    ElMessage.error('状态更新失败')
-    // 恢复状态
-    row.status = row.status === 1 ? 0 : 1
-  }
-}
-
-const handleResetPassword = async (row) => {
-  await ElMessageBox.confirm('确定要重置该用户的密码吗？密码将重置为：123456', '提示', {
-    type: 'warning'
-  })
-  try {
-    await userApi.resetPassword(row.id)
-    ElMessage.success('密码重置成功')
-  } catch (error) {
-    ElMessage.error('密码重置失败')
+    ElMessage.error(error?.response?.data?.message || '操作失败')
   }
 }
 
 const handleDelete = async (row) => {
-  await ElMessageBox.confirm('确定要删除该用户吗？', '提示', {
-    type: 'warning'
-  })
   try {
-    await userApi.delete(row.id)
+    await ElMessageBox.confirm('确定要删除该用户吗？', '提示', {
+      type: 'warning'
+    })
+    const currentUserId = userStore.userInfo?.userId || userStore.userInfo?.id
+    await userApi.delete(row.id, currentUserId)
     ElMessage.success('删除成功')
     loadData()
   } catch (error) {
-    ElMessage.error('删除失败')
-  }
-}
-
-const loadRoles = async () => {
-  try {
-    const { data } = await getRoleList()
-    roleList.value = data
-  } catch (error) {
-    console.error('加载角色列表失败', error)
+    if (error !== 'cancel') ElMessage.error('删除失败')
   }
 }
 
 onMounted(() => {
   loadData()
-  loadRoles()
 })
 </script>
 
 <style scoped lang="scss">
+@use "@/styles/glass-theme.scss" as *;
+
 .user-container {
-  padding: 20px;
+  &.glass-page {
+  }
 
   .page-header {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
     position: relative;
+    border: none;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
 
-    .header-content {
-      .title-section {
-        h2 {
-          margin: 0 0 8px 0;
-          font-size: 24px;
-          font-weight: 600;
-        }
+    .title-section {
+      h2 {
+        margin: 0 0 8px 0;
+        font-size: 24px;
+        font-weight: 800;
+        color: #1e293b;
+      }
 
-        .subtitle {
-          margin: 0;
-          color: #909399;
-          font-size: 14px;
-        }
+      .subtitle {
+        margin: 0;
+        color: #64748b;
+        font-size: 14px;
       }
     }
 
     .header-actions {
       position: absolute;
       top: 50%;
-      right: 20px;
+      right: 24px;
       transform: translateY(-50%);
     }
   }
 
+  .search-card {
+    margin-bottom: 24px;
+  }
+
   .table-card {
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+    padding: 8px;
   }
 }
 </style>
-
-

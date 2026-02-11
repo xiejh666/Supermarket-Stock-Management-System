@@ -1,5 +1,6 @@
 <template>
-  <div class="inventory-container">
+  <div class="inventory-container glass-page">
+    <!-- 标题卡片 -->
     <el-card class="page-header">
       <div class="header-content">
         <div class="title-section">
@@ -8,7 +9,7 @@
         </div>
       </div>
       <div class="header-actions">
-        <el-button type="warning" @click="handleRefresh">
+        <el-button type="warning" @click="handleRefresh" class="refresh-btn">
           <el-icon><Refresh /></el-icon>
           刷新库存
         </el-button>
@@ -16,11 +17,11 @@
     </el-card>
 
     <!-- 统计卡片 -->
-    <el-row :gutter="20" style="margin-bottom: 20px">
+    <el-row :gutter="20" style="margin-bottom: 24px">
       <el-col :span="8">
-        <el-card class="stat-card">
+        <el-card class="stat-card glass-card variant-blue">
           <div class="stat-content">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
+            <div class="stat-icon">
               <el-icon><Box /></el-icon>
             </div>
             <div class="stat-info">
@@ -31,9 +32,9 @@
         </el-card>
       </el-col>
       <el-col :span="8">
-        <el-card class="stat-card">
+        <el-card class="stat-card glass-card variant-pink">
           <div class="stat-content">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%)">
+            <div class="stat-icon">
               <el-icon><Warning /></el-icon>
             </div>
             <div class="stat-info">
@@ -44,9 +45,9 @@
         </el-card>
       </el-col>
       <el-col :span="8">
-        <el-card class="stat-card">
+        <el-card class="stat-card glass-card variant-cyan">
           <div class="stat-content">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)">
+            <div class="stat-icon">
               <el-icon><Goods /></el-icon>
             </div>
             <div class="stat-info">
@@ -60,7 +61,7 @@
 
     <el-card class="table-card">
       <!-- 搜索栏 -->
-      <el-form :inline="true" :model="searchForm" class="search-form">
+      <el-form :inline="true" :model="searchForm" class="search-form toolbar">
         <el-form-item label="商品名称">
           <el-input
             v-model="searchForm.productName"
@@ -99,11 +100,11 @@
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleSearch">
+          <el-button type="primary" @click="handleSearch" class="glass-btn primary">
             <el-icon><Search /></el-icon>
             搜索
           </el-button>
-          <el-button @click="handleReset">重置</el-button>
+          <el-button @click="handleReset" class="glass-btn plain">重置</el-button>
         </el-form-item>
       </el-form>
 
@@ -120,8 +121,8 @@
         <el-table-column prop="minStock" label="预警库存" width="120" />
         <el-table-column label="库存状态" width="120">
           <template #default="{ row }">
-            <el-tag v-if="row.stock <= row.minStock" type="warning">低库存</el-tag>
-            <el-tag v-else type="success">库存正常</el-tag>
+            <el-tag v-if="row.stock <= row.minStock" type="warning" effect="light">低库存</el-tag>
+            <el-tag v-else type="success" effect="light">库存正常</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="updateTime" label="更新时间" width="180" />
@@ -209,7 +210,7 @@
         </el-table-column>
         <el-table-column prop="changeQuantity" label="变动数量" width="100">
           <template #default="{ row }">
-            <span :style="{ color: row.changeQuantity > 0 ? '#67c23a' : '#f56c6c', fontWeight: 'bold' }">
+            <span :style="{ color: row.changeQuantity > 0 ? '#10b981' : '#ef4444', fontWeight: 'bold' }">
               {{ row.changeQuantity > 0 ? '+' : '' }}{{ row.changeQuantity }}
             </span>
           </template>
@@ -239,7 +240,7 @@
     >
       <el-descriptions v-if="historyDetailData" :column="2" border>
         <el-descriptions-item label="商品名称" :span="2">
-          <span style="font-weight: 600; color: #303133;">{{ historyDetailData.productName }}</span>
+          <span style="font-weight: 600; color: #1e293b;">{{ historyDetailData.productName }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="变动类型">
           <el-tag :type="getChangeTypeTag(historyDetailData.changeType)">
@@ -248,7 +249,7 @@
         </el-descriptions-item>
         <el-descriptions-item label="变动数量">
           <span :style="{ 
-            color: historyDetailData.changeQuantity > 0 ? '#67c23a' : '#f56c6c',
+            color: historyDetailData.changeQuantity > 0 ? '#10b981' : '#ef4444',
             fontWeight: 'bold',
             fontSize: '16px'
           }">
@@ -259,7 +260,7 @@
           <span style="font-size: 15px;">{{ historyDetailData.beforeQuantity }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="变动后库存">
-          <span style="font-size: 15px; font-weight: 600; color: #409eff;">{{ historyDetailData.afterQuantity }}</span>
+          <span style="font-size: 15px; font-weight: 600; color: #3b82f6;">{{ historyDetailData.afterQuantity }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="订单号" :span="2">
           {{ historyDetailData.orderNo || '无' }}
@@ -270,14 +271,14 @@
           </div>
         </el-descriptions-item>
         <el-descriptions-item label="操作时间" :span="2">
-          <span style="color: #909399;">
+          <span style="color: #64748b;">
             <el-icon><Clock /></el-icon>
             {{ historyDetailData.createTime }}
           </span>
         </el-descriptions-item>
       </el-descriptions>
       <template #footer>
-        <el-button type="primary" @click="historyDetailVisible = false">关闭</el-button>
+        <el-button type="primary" @click="historyDetailVisible = false" class="glass-btn primary">关闭</el-button>
       </template>
     </el-dialog>
   </div>
@@ -397,16 +398,6 @@ const handleReset = () => {
   }
   
   handleSearch()
-}
-
-// 兼容旧的重置方法
-const handleResetOld = () => {
-  searchForm.value = {
-    productName: '',
-    categoryId: null
-  }
-  pageNum.value = 1
-  loadData()
 }
 
 const handlePageChange = () => {
@@ -551,107 +542,125 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
+@use "@/styles/glass-theme.scss" as *;
+
 .inventory-container {
-  padding: 20px;
+  &.glass-page {
+  }
 
   .page-header {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
     position: relative;
+    border: none;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
 
-    .header-content {
-      .title-section {
-        h2 {
-          margin: 0 0 8px 0;
-          font-size: 24px;
-          font-weight: 600;
-        }
+    .title-section {
+      h2 {
+        margin: 0 0 8px 0;
+        font-size: 24px;
+        font-weight: 800;
+        color: #1e293b;
+      }
 
-        .subtitle {
-          margin: 0;
-          color: #909399;
-          font-size: 14px;
-        }
+      .subtitle {
+        margin: 0;
+        color: #64748b;
+        font-size: 14px;
       }
     }
 
     .header-actions {
       position: absolute;
       top: 50%;
-      right: 20px;
+      right: 24px;
       transform: translateY(-50%);
     }
   }
 
-  .stat-card {
+  .refresh-btn {
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px -4px rgba(230, 162, 60, 0.3);
+    }
+  }
+
+  /* 统计卡片玻璃感风格 */
+  .stat-card.glass-card {
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    padding: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    
+    &.variant-blue { background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.06) 100%); }
+    &.variant-pink { background: linear-gradient(135deg, rgba(240, 147, 251, 0.1) 0%, rgba(245, 87, 108, 0.06) 100%); }
+    &.variant-cyan { background: linear-gradient(135deg, rgba(79, 172, 254, 0.1) 0%, rgba(0, 242, 254, 0.06) 100%); }
+
     .stat-content {
       display: flex;
       align-items: center;
       gap: 20px;
+      width: 100%;
 
       .stat-icon {
-        width: 60px;
-        height: 60px;
-        border-radius: 12px;
+        width: 54px;
+        height: 54px;
+        border-radius: 14px;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
-        font-size: 28px;
+        font-size: 26px;
+        transition: all 0.3s ease;
       }
 
       .stat-info {
         flex: 1;
 
         .stat-value {
-          font-size: 28px;
-          font-weight: bold;
-          color: #303133;
+          font-size: 26px;
+          font-weight: 800;
+          color: #1e293b;
           margin-bottom: 4px;
+          letter-spacing: -0.5px;
 
           &.warning {
-            color: #e6a23c;
+            color: #f59e0b;
           }
         }
 
         .stat-label {
-          font-size: 14px;
-          color: #909399;
+          font-size: 13px;
+          color: #64748b;
+          font-weight: 500;
         }
       }
     }
   }
 
-  .table-card {
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  .variant-blue .stat-icon { color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+  .variant-pink .stat-icon { color: #ec4899; background: rgba(236, 72, 153, 0.1); }
+  .variant-cyan .stat-icon { color: #06b6d4; background: rgba(6, 182, 212, 0.1); }
 
-    .search-form {
-      margin-bottom: 20px;
-    }
+  .table-card {
+    padding: 8px;
   }
 
   .stock-warning {
-    color: #e6a23c;
-    font-weight: bold;
+    color: #f59e0b;
+    font-weight: 700;
   }
 }
 
 // 历史记录选中行样式
 :deep(.selected-history-row) {
-  background-color: #ecf5ff !important;
+  background-color: rgba(59, 130, 246, 0.05) !important;
   
   td {
-    background-color: #ecf5ff !important;
+    background-color: transparent !important;
   }
-  
-  &:hover td {
-    background-color: #d9ecff !important;
-  }
-}
-
-// 历史记录表格行悬停效果增强
-:deep(.el-table__body tr:hover) {
-  cursor: pointer;
 }
 </style>
-
-

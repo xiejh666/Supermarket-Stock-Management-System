@@ -204,8 +204,8 @@
         
         <!-- 底部操作 -->
         <div class="notification-footer">
-          <el-button type="primary" text @click="markAllAsReadHandler">全部已读</el-button>
-          <el-button type="danger" text @click="clearAll">清空消息</el-button>
+          <el-button text @click="markAllAsReadHandler" class="ios-glass-action">全部已读</el-button>
+          <el-button text @click="clearAll" class="ios-glass-action danger">清空消息</el-button>
         </div>
       </div>
     </el-drawer>
@@ -548,14 +548,19 @@ onMounted(() => {
 /* 侧边栏 */
 .sidebar {
   width: var(--sidebar-width);
-  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background:
+    radial-gradient(740px 320px at 12% 18%, rgba(59, 130, 246, 0.12), transparent 62%),
+    radial-gradient(640px 300px at 88% 82%, rgba(16, 185, 129, 0.10), transparent 64%),
+    linear-gradient(180deg, rgba(255,255,255,0.86), rgba(255,255,255,0.74));
+  color: var(--text-primary);
   display: flex;
   flex-direction: column;
   transition: width 0.3s ease;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 2px 0 18px rgba(15, 23, 42, 0.06);
+  border-right: 1px solid rgba(226, 232, 240, 0.85);
   position: relative;
   z-index: 100;
+  backdrop-filter: blur(10px);
 }
 
 .sidebar-collapsed .sidebar {
@@ -568,27 +573,26 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   padding: 0 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
 }
 
 .logo {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 800;
   animation: fadeInDown 0.5s ease;
 }
 
 .logo i {
-  font-size: 32px;
+  font-size: 28px;
+  color: #3b82f6;
 }
 
 .logo-text {
-  background: linear-gradient(135deg, #fff 0%, #e0e7ff 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #0f172a;
+  letter-spacing: -0.5px;
 }
 
 .logo-icon-small {
@@ -608,73 +612,93 @@ onMounted(() => {
 
 :deep(.el-menu-item),
 :deep(.el-sub-menu__title) {
-  color: rgba(255, 255, 255, 0.8);
-  transition: all 0.3s ease;
-  border-radius: 8px;
-  margin: 4px 8px;
+  color: rgba(15, 23, 42, 0.78);
+  transition: all 0.25s ease;
+  border-radius: 12px;
+  margin: 6px 10px;
+  height: 46px;
+  line-height: 46px;
 }
 
 :deep(.el-menu-item:hover),
 :deep(.el-sub-menu__title:hover) {
-  background: rgba(255, 255, 255, 0.15) !important;
-  color: white;
+  background: rgba(15, 23, 42, 0.05) !important;
+  color: rgba(15, 23, 42, 0.92);
 }
 
 :deep(.el-menu-item.is-active) {
-  background: rgba(255, 255, 255, 0.2) !important;
-  color: white;
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: rgba(59, 130, 246, 0.12) !important;
+  color: rgba(29, 78, 216, 0.98);
+  font-weight: 700;
+  box-shadow: 0 10px 22px -16px rgba(15, 23, 42, 0.35);
+}
+
+:deep(.el-menu-item.is-active::before) {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 18px;
+  border-radius: 3px;
+  background: rgba(59, 130, 246, 0.85);
 }
 
 :deep(.el-sub-menu .el-menu-item) {
   background: transparent;
-  color: rgba(255, 255, 255, 0.7);
-  min-height: 40px;
-  line-height: 40px;
-  padding-left: 48px !important;
+  color: rgba(15, 23, 42, 0.68);
+  min-height: 42px;
+  line-height: 42px;
+  height: 42px;
+  padding-left: 52px !important;
 }
 
 :deep(.el-sub-menu .el-menu-item:hover) {
-  background: rgba(255, 255, 255, 0.1) !important;
-  color: white;
+  background: rgba(15, 23, 42, 0.04) !important;
+  color: rgba(15, 23, 42, 0.92);
 }
 
 :deep(.el-sub-menu .el-menu-item.is-active) {
-  background: rgba(255, 255, 255, 0.2) !important;
-  color: white;
-  font-weight: 600;
+  background: rgba(59, 130, 246, 0.10) !important;
+  color: rgba(29, 78, 216, 0.98);
+  font-weight: 700;
 }
 
 :deep(.el-sub-menu__title) {
-  color: rgba(255, 255, 255, 0.8) !important;
+  color: rgba(15, 23, 42, 0.78) !important;
 }
 
 :deep(.el-sub-menu.is-opened .el-sub-menu__title) {
-  color: white !important;
+  color: rgba(15, 23, 42, 0.92) !important;
 }
 
 :deep(.el-menu--inline) {
-  background-color: rgba(0, 0, 0, 0.1) !important;
+  background-color: rgba(15, 23, 42, 0.035) !important;
+  border-radius: 14px;
+  margin: 6px 10px;
+  padding: 6px 0;
 }
 
 .sidebar-footer {
   padding: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
   display: flex;
   justify-content: center;
 }
 
 .collapse-btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  color: white;
-  transition: all 0.3s ease;
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  color: rgba(15, 23, 42, 0.75);
+  transition: all 0.25s ease;
 }
 
 .collapse-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: scale(1.1);
+  background: rgba(59, 130, 246, 0.10);
+  border-color: rgba(59, 130, 246, 0.18);
+  color: rgba(29, 78, 216, 0.95);
+  transform: scale(1.06);
 }
 
 /* 主内容区 */
@@ -874,11 +898,44 @@ onMounted(() => {
 }
 
 .notification-footer {
-  padding: 16px;
-  border-top: 1px solid #ebeef5;
+  padding: 20px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
   display: flex;
-  justify-content: space-around;
-  background: white;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(20px);
+  position: sticky;
+  bottom: 0;
+}
+
+.ios-glass-action {
+  flex: 1;
+  height: 44px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  background: rgba(255, 255, 255, 0.6) !important;
+  color: #007aff !important; /* iOS Blue */
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin: 0 !important;
+}
+
+.ios-glass-action:hover {
+  background: rgba(255, 255, 255, 0.8) !important;
+  transform: scale(1.02);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.ios-glass-action:active {
+  transform: scale(0.98);
+}
+
+.ios-glass-action.danger {
+  color: #ff3b30 !important; /* iOS Red */
 }
 
 /* 响应式 */

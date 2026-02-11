@@ -1,5 +1,5 @@
 <template>
-  <div class="sale-container">
+  <div class="sale-container glass-page">
     <!-- 标题卡片 -->
     <el-card class="page-header">
       <div class="header-content">
@@ -9,7 +9,12 @@
         </div>
       </div>
       <div class="header-actions">
-        <el-button v-if="canCreate('sale')" type="primary" @click="handleAdd">
+        <el-button
+          v-if="canCreate('sale')"
+          type="primary"
+          @click="handleAdd"
+          class="glass-btn primary"
+        >
           <el-icon><Plus /></el-icon>
           新增销售单
         </el-button>
@@ -55,8 +60,8 @@
         </el-row>
         <el-row>
           <el-col :span="24" style="text-align: right;">
-            <el-button type="primary" @click="handleSearch">查询</el-button>
-            <el-button @click="handleReset">重置</el-button>
+            <el-button type="primary" @click="handleSearch" class="glass-btn primary">查询</el-button>
+            <el-button @click="handleReset" class="glass-btn plain">重置</el-button>
           </el-col>
         </el-row>
       </el-form>
@@ -565,48 +570,52 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
+@use "@/styles/glass-theme.scss" as *;
+
 .sale-container {
-  padding: 20px;
+  &.glass-page {
+  }
 
   .page-header {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
     position: relative;
+    border: none;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
 
-    .header-content {
-      .title-section {
-        h2 {
-          margin: 0 0 8px 0;
-          font-size: 24px;
-          font-weight: 600;
-        }
+    .title-section {
+      h2 {
+        margin: 0 0 8px 0;
+        font-size: 24px;
+        font-weight: 800;
+        color: #1e293b;
+      }
 
-        .subtitle {
-          margin: 0;
-          color: #909399;
-          font-size: 14px;
-        }
+      .subtitle {
+        margin: 0;
+        color: #64748b;
+        font-size: 14px;
       }
     }
 
     .header-actions {
       position: absolute;
       top: 50%;
-      right: 20px;
+      right: 24px;
       transform: translateY(-50%);
     }
   }
 
   .toolbar {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
   }
 
   .table-card {
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+    padding: 8px;
   }
 
   .amount {
     color: #67c23a;
-    font-weight: bold;
+    font-weight: 700;
   }
   
   .detail-content {
@@ -614,18 +623,18 @@ onMounted(async () => {
   }
   
   .section-title {
-      margin: 20px 0 10px;
-      font-weight: bold;
+      margin: 24px 0 12px;
+      font-weight: 700;
       font-size: 16px;
-      border-left: 4px solid #409EFF;
-      padding-left: 10px;
+      border-left: 4px solid #3b82f6;
+      padding-left: 12px;
+      color: #1e293b;
   }
   
   .dialog-footer {
       display: flex;
       justify-content: flex-end;
-      gap: 10px;
+      gap: 12px;
   }
 }
 </style>
-
